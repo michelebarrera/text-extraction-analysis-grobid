@@ -19,7 +19,12 @@ Description of selected papers (source, topic, why chosen).
 - List of links per paper
 
 ## Validation
-Explain how results were validated.
 
-## Reproducibility
-How to run the project.
+### Keyword cloud
+We manually checked that the most frequent words correspond to domain-specific terminology.
+
+### Figures per article
+We manually opened 2–3 PDFs and counted figures visually to compare with XML results.
+
+### Links extraction
+We verified extracted URLs against the PDF text using Ctrl+F.
