@@ -1,0 +1,1535 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xml:space="preserve" xmlns="http://www.tei-c.org/ns/1.0" 
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+xsi:schemaLocation="http://www.tei-c.org/ns/1.0 https://raw.githubusercontent.com/kermitt2/grobid/master/grobid-home/schemas/xsd/Grobid.xsd"
+ xmlns:xlink="http://www.w3.org/1999/xlink">
+	<teiHeader xml:lang="en">
+		<fileDesc>
+			<titleStmt>
+				<title level="a" type="main">Sink-Aware Pruning for Diffusion Language Models</title>
+			</titleStmt>
+			<publicationStmt>
+				<publisher/>
+				<availability status="unknown"><licence/></availability>
+				<date type="published" when="2026-02-19">19 Feb 2026</date>
+			</publicationStmt>
+			<sourceDesc>
+				<biblStruct>
+					<analytic>
+						<author>
+							<persName><forename type="first">Aidar</forename><surname>Myrzakhan</surname></persName>
+						</author>
+						<author>
+							<persName><forename type="first">Tianyi</forename><surname>Li</surname></persName>
+						</author>
+						<author>
+							<persName><forename type="first">Bowei</forename><surname>Guo</surname></persName>
+						</author>
+						<author>
+							<persName><forename type="first">Shengkun</forename><surname>Tang</surname></persName>
+						</author>
+						<author>
+							<persName><forename type="first">Zhiqiang</forename><surname>Shen</surname></persName>
+						</author>
+						<author>
+							<persName><roleName>MBZUAI</roleName><forename type="first">Vila</forename><surname>Lab</surname></persName>
+						</author>
+						<title level="a" type="main">Sink-Aware Pruning for Diffusion Language Models</title>
+					</analytic>
+					<monogr>
+						<imprint>
+							<date type="published" when="2026-02-19">19 Feb 2026</date>
+						</imprint>
+					</monogr>
+					<idno type="MD5">9DBB6E2A376ED9F5DD7D9B4D04987E32</idno>
+					<idno type="arXiv">arXiv:2602.17664v1[cs.CL]</idno>
+				</biblStruct>
+			</sourceDesc>
+		</fileDesc>
+		<encodingDesc>
+			<appInfo>
+				<application version="0.8.0" ident="GROBID" when="2026-02-22T21:45+0000">
+					<desc>GROBID - A machine learning software for extracting information from scholarly documents</desc>
+					<ref target="https://github.com/kermitt2/grobid"/>
+				</application>
+			</appInfo>
+		</encodingDesc>
+		<profileDesc>
+			<abstract>
+<div xmlns="http://www.tei-c.org/ns/1.0"><p>Diffusion Language Models (DLMs) incur high inference cost due to iterative denoising, motivating efficient pruning. Existing pruning heuristics largely inherited from autoregressive (AR) LLMs, typically preserve attention sink tokens because AR sinks serve as stable global anchors. We show that this assumption does not hold for DLMs: the attentionsink position exhibits substantially higher variance over the full generation trajectory (measured by how the dominant sink locations shift across timesteps), indicating that sinks are often transient and less structurally essential than in AR models. Based on this observation, we propose Sink-Aware Pruning, which automatically identifies and prunes unstable sinks in DLMs (prior studies usually keep sinks for AR LLMs). Without retraining, our method achieves a better quality-efficiency trade-off and outperforms strong prior pruning baselines under matched compute.</p></div>
+			</abstract>
+		</profileDesc>
+	</teiHeader>
+	<text xml:lang="en">
+		<body>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="1">Introduction</head><p>Diffusion Language Models (DLMs) <ref type="bibr" target="#b41">(Li et al., 2025;</ref><ref type="bibr" target="#b29">Nie et al., 2025;</ref><ref type="bibr" target="#b43">Ye et al., 2025;</ref><ref type="bibr" target="#b45">Zhu et al., 2025)</ref> generate text via iterative denoising over multiple timesteps, repeatedly updating the full token sequence (or a latent representation) until it converges. This contrasts with autoregressive (AR) LLMs <ref type="bibr" target="#b30">(Radford et al., 2018</ref><ref type="bibr" target="#b31">(Radford et al., , 2019))</ref>, which generate tokens one-by-one with a single forward pass per new token. While DLMs recently can achieve attractive generation properties, their iterative inference substantially increases compute and memory cost, making many acceleration, especially pruning, critical for practical deployment. Most existing pruning recipes, however, are adapted from AR Transformers and implicitly assume that attention behaviors (and their important tokens) transfer unchanged to diffusion-style generation.  A key AR-specific phenomenon is the existence of attention sink tokens: a small set of positions (often early tokens such as BOS, system prompts, or a few prefix tokens) that consistently attract disproportionately large attention mass across layers and heads. In AR models, these sinks behave as stable global anchors that help propagate conditioning information and stabilize residual-stream dynamics across the long, causal computation graph in autoregressive-based attention. Consequently, many AR pruning and token-dropping methods explicitly preserve sinks (or protect early/prefix tokens) to avoid catastrophic quality degradation. This practice has become a de facto heuristic: when pruning attention structure, do not remove sink positions because they are assumed to be universally important in AR models.</p><p>We revisit this assumption for DLMs and find it does not hold. Because DLMs update all tokens at each diffusion timestep, the model's attention organization evolves throughout the denoising trajectory: early steps must resolve global structure under high noise, while later steps refine local syn-LLaDA (step=75%) For each model, we show 3 different generation stages (25, 50, and 75% of the total generation steps) and plot the attention mass received by each token position (y-axis) across all heads/layers (x-axis). In LLaMA, the sink position (deep-blue vertical band) is stable across steps, while in LLaDA, the sink position shifts significantly across diffusion steps, indicating higher sink variance. The step in AR model refers to the generation process.</p><p>tax and semantics under lower noise. To quantify sink stability, we compute attention statistics at every generation step for every token: for AR models, "step" corresponds to each newly generated token; for DLMs, "step" corresponds to each diffusion timestep (with attention computed over the whole sequence each time). We then track the sink position (e.g., the token index receiving maximal aggregated attention, or the top-k sink indices) across the entire generation process and define sink variance as the degree to which these sink positions shift over steps, as shown in Fig. <ref type="figure" target="#fig_1">2</ref>. This analysis (as shown in Fig. <ref type="figure" target="#fig_0">1</ref> and Fig. <ref type="figure" target="#fig_5">4a</ref>) reveals a clear divergence: sink-token variance in DLMs is substantially larger than in AR LLMs. In AR generation, sink positions tend to be highly persistent: once a sink emerges (typically near the prefix), it remains a sink across subsequent token emissions and across many heads / layers. In DLMs, by contrast, the identity and location of the dominant sink frequently changes across diffusion timesteps, reflecting the model's shifting needs as denoising progresses. Many sinks in DLMs are therefore transient: they may attract attention at some timesteps (often under high noise or during global structure formation) but lose prominence later, and different sinks may take over as the sequence becomes more refined. This implies that always keep sinks is not a diffusion-invariant principle, rather, it is a property of causal, prefix-conditioned AR computation.</p><p>Motivated by this, we propose Sink-Aware Pruning: a diffusion-specific pruning strategy that distinguishes stable anchors from ephemeral sinks, and prunes accordingly. Instead of hard-coding sink preservation, we (i) estimate sink variance over the denoising trajectory, (ii) identify unstable sink candidates whose sink positions fluctuate significantly across diffusion timesteps, and (iii) prune these unstable sinks to reduce attention / weight cost while preserving informative pathways. Crucially, the method is generation-paradigm aware: for AR LLMs, where sink variance is low and sinks are structurally important, thus prior work keeps sinks, for DLMs in this work, where sink variance is high, we allow and encourage sink pruning.</p><p>Empirically, Sink-Aware Pruning improves the quality-efficiency trade-off over strong prior pruning baselines under matched compute. Across multiple DLM settings, pruning transient sinks reduces redundant or global attention that does not persist across timesteps, enabling more aggressive pruning without the failure modes observed when AR-centric sink-preservation heuristics are naively applied to DLMs. The results support our central claim: attention sinks are not universally must-keep tokens, their utility depends on the generation dynamics. By explicitly measuring sink-position variance and tailoring pruning decisions to diffusion timesteps, Sink-Aware Pruning provides a principled and effective route to accelerating DLM inference without retraining.</p><p>In summary, our contributions are threefold:</p><p>• We introduce sink-position variance to track how attention-sink indices shift over the full generation trajectory, and show it is much higher in diffusion LLMs than in autoregressive LLMs when computing attention at every AR step / diffusion timestep for each token.</p><p>• We demonstrate that the AR heuristic always keep attention sinks does not transfer to diffusion generation: sinks are stable anchors in AR models but are often transient in DLMs, so they can be pruned.</p><p>• We propose Sink-Aware Pruning, which prunes unstable sinks in DLMs (while conventional AR LLMs preserve sinks) with timestep-aware retention of salient attentions, and outperforms strong prior pruning baselines under the same compute.</p><p>2 Related Work</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="2.1">Diffusion Language Models</head><p>Diffusion Language Models (DLMs) <ref type="bibr" target="#b41">(Li et al., 2025;</ref><ref type="bibr" target="#b29">Nie et al., 2025;</ref><ref type="bibr" target="#b43">Ye et al., 2025)</ref> have recently emerged as a promising non-autoregressive alternative to conventional autoregressive language models. Inspired by diffusion models in continuous domains <ref type="bibr" target="#b19">(Ho et al., 2020;</ref><ref type="bibr" target="#b33">Rombach et al., 2022)</ref>, DLMs formulate text generation as an iterative denoising process, enabling parallel generation and naturally incorporating bidirectional context. Existing work broadly categorizes DLMs into continuous-space and discrete-space formulations. Continuous DLMs operate on token embeddings or logits and apply Gaussian or flowbased diffusion processes <ref type="bibr" target="#b12">(Gong et al., 2022;</ref><ref type="bibr" target="#b23">Li et al., 2022)</ref>, while discrete DLMs define diffusion directly over categorical token spaces using masking or structured transition operators <ref type="bibr" target="#b1">(Austin et al., 2021;</ref><ref type="bibr" target="#b17">He et al., 2023;</ref><ref type="bibr" target="#b35">Sahoo et al., 2024)</ref>.</p><p>Recent advances demonstrate that large-scale discrete DLMs can achieve performance comparable to strong autoregressive baselines while offering substantial inference speedups through parallel decoding <ref type="bibr" target="#b38">(Wu et al., 2025;</ref><ref type="bibr" target="#b28">Ni et al., 2025)</ref>. Moreover, hybrid autoregressive-diffusion approaches further balance generation quality and efficiency by combining block-wise autoregression with intra-block diffusion refinement <ref type="bibr" target="#b0">(Arriola et al., 2025;</ref><ref type="bibr" target="#b5">Cheng et al., 2025)</ref>.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="2.2">Attention Sink in LLMs</head><p>Initially identified in LLMs by <ref type="bibr" target="#b39">Xiao et al. (2023)</ref>, attention sinks are a small set of tokens (often early in the context) that absorb disproportionate attention across many layers / heads despite limited semantic value <ref type="bibr" target="#b13">(Gu et al., 2024;</ref><ref type="bibr" target="#b2">Barbero et al., 2025)</ref>. <ref type="bibr" target="#b39">Xiao et al. (2023)</ref> attribute sinks to Softmax normalization: when a query has no strong match, attention mass must still be assigned somewhere, and globally visible early tokens become a natural dumping ground for redundant attention.</p><p>Recent work shows sinks also appear in masked DLMs but with different behavior <ref type="bibr" target="#b34">(Rulli et al., 2025)</ref>. Studying large masked DLMs (e.g., LLaDA <ref type="bibr" target="#b29">(Nie et al., 2025)</ref>, Dream <ref type="bibr" target="#b43">(Ye et al., 2025)</ref>, MMaDA <ref type="bibr">(Yang et al., 2025a)</ref>), they find sink locations are step-dependent, emerging, shifting, or vanishing as denoising progresses. Moreover, unlike autoregressive models where removing sinks can severely hurt performance, masked DLMs are relatively robust: masking top sinks during generation causes only minor drops. This suggests bidirectional iterative denoising provides alternative aggregation pathways, making sink dynamics central to long-context efficiency and stability across decoding paradigms.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="2.3">LLM Pruning</head><p>Network pruning has long been studied as a model compression technique that reduces inference cost by removing redundant parameters based on importance criteria <ref type="bibr" target="#b21">(LeCun et al., 1989;</ref><ref type="bibr" target="#b16">Hassibi et al., 1993;</ref><ref type="bibr">Han et al., 2015a;</ref><ref type="bibr" target="#b4">Cheng et al., 2024)</ref>. Existing approaches are commonly categorized into unstructured and structured pruning. While unstructured pruning offers fine-grained flexibility, structured pruning removes entire neurons, channels, or matrix rows/columns, making it more amenable to hardware acceleration but often at the cost of higher Identify sink tokens</p><formula xml:id="formula_0">! ! &gt; 1 $ -1 &amp; "#! ' " + ) 0 1 0 1 0 Sink score # Sink Sink $ = 1 -# 1 0 1 0 1 Down-weighting factor " = ( ℓ#$ % ( &amp;#$ ' ) ℓ,&amp;</formula><p>Attention mass aggregation accuracy degradation <ref type="bibr">(Han et al., 2015b;</ref><ref type="bibr" target="#b24">Liu et al., 2017;</ref><ref type="bibr" target="#b27">Molchanov et al., 2019)</ref>.</p><p>As large language models continue to scale, applying traditional pruning pipelines becomes increasingly challenging due to the prohibitive cost of retraining. This has motivated a shift toward post-training pruning methods, which aim to identify and remove unimportant weights directly from pretrained models using lightweight importance metrics, without full retraining <ref type="bibr" target="#b37">(Sun et al., 2023;</ref><ref type="bibr" target="#b9">Frantar and Alistarh, 2023;</ref><ref type="bibr" target="#b8">Das et al., 2023;</ref><ref type="bibr">Yang et al., 2025b)</ref>. These approaches have demonstrated promising results for compressing LLMs with minimal performance loss, and highlight pruning as a practical tool for improving inference efficiency in large-scale models <ref type="bibr" target="#b25">(Ma et al., 2023)</ref>.</p><p>3 Sink-Aware Pruning for DLMs 3.1 Preliminaries Wanda. Wanda <ref type="bibr" target="#b37">(Sun et al., 2023)</ref> assigns each weight an output-wise importance score that combines its magnitude with the norm of the corresponding input activation. For a linear layer with weights W ∈ R Cout×C in and input activations X ∈ R N ×C in collected from a calibration set, the importance score of weight W ij is defined as:</p><formula xml:id="formula_1">S ij = |W ij | • ∥X •j ∥ 2 .</formula><p>(1)</p><p>where X •j ∈ R N denotes the j-th input feature across samples. Pruning is performed independently for each output neuron by comparing scores within each row group G i = {W i,1 , . . . , W i,C in } and removing the lowest s% weights per output.</p><p>The activation norms ∥X •j ∥ 2 are estimated without gradient or Hessian computation, making Wanda computationally efficient for large models.</p><p>SparseGPT. SparseGPT <ref type="bibr" target="#b9">(Frantar and Alistarh, 2023)</ref> formulates the post-training pruning process as a layer-wise reconstruction problem using second-order information. For a layer with original weights W and layer inputs X, the pruning objective is defined as:</p><formula xml:id="formula_2">min M, W ∥W X -(M ⊙ W )X∥ 2 F ,<label>(2)</label></formula><p>where M is a binary pruning mask and W denotes the reconstructed weights. Given a fixed mask M i for the i-th output row, the optimal remaining weights admit a closed-form linear regression solution:</p><formula xml:id="formula_3">w i M i = X M i X ⊤ M i -1 X M i (w M i X M i ) ⊤ ,<label>(3)</label></formula><p>Based on a second-order approximation, the loss increase induced by removing a scalar weight w m is estimated as:</p><formula xml:id="formula_4">ε m = w 2 m [H -1 ] mm . (<label>4</label></formula><formula xml:id="formula_5">)</formula><p>where H = XX ⊤ +λI is the empirical Hessian approximation. SparseGPT iteratively prunes weights with small ε m and updates the remaining weights to reduce reconstruction error, enabling high sparsity without retraining.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="3.2">Sink-Aware Pruning</head><p>Variance Statistics in DLMs and AR models.</p><p>To characterize how attention sinks differ between diffusion and autoregressive language models, we introduce two complementary variance statistics.</p><p>Let A (t) ∈ R N ×N denote the attention matrix at generation step t (a diffusion timestep for DLMs; a token emission for AR models), where N is the sequence length. We define the incoming attention mass at position i and step t as:</p><formula xml:id="formula_6">m t (i) = N j=1 A (t) j,i ,<label>(5)</label></formula><p>which measures how much total attention all other tokens direct toward position i. Positions receiving substantially more incoming attention than the average act as attention sinks at that step.</p><p>We capture two dimensions of sink behavior. Spatial variance measures how unevenly attention concentrates across positions when averaged over the full trajectory. We compute m(i) = 1 T T t=1 m t (i) and take</p><formula xml:id="formula_7">σ 2 spatial = Var i ( m(i)) .<label>(6)</label></formula><p>A large value indicates that a few positions dominate the attention landscape on average, but does not reveal whether those positions stay fixed over time. Temporal variance captures how much the sink location shifts across steps. At each step t, we compute the attention-weighted centroid over the current sink set S t (defined below):</p><formula xml:id="formula_8">c t = i∈St m t (i) • i i∈St m t (i) , σ 2 temporal = Var t (c t ).</formula><p>(7) A near-zero temporal variance means the sink remains locked to the same region throughout generation, while a large value indicates substantial migration.</p><p>As shown in Fig. <ref type="figure" target="#fig_5">4</ref>, these two statistics reveal a clear contrast. AR models exhibit high spatial variance but near-zero temporal variance: their sinks are concentrated on a small, fixed set of early positions and remain stationary across all generation steps. DLMs show the opposite pattern: lower  spatial variance (attention is more distributed) but temporal variance that is orders of magnitude larger. The sink trajectory (Fig. <ref type="figure" target="#fig_6">5</ref>) provides further intuition: for AR models, the sink stays flat, while for DLMs it drifts progressively from earlier to later positions as denoising advances, with wide step-to-step variability. This drift reflects how early diffusion steps focus on global structure under high noise, while later steps shift attention toward local, token-level refinement. In short, AR sinks are spatially concentrated and temporally stable, while DLM sinks are spatially diffuse and temporally transient.</p><p>Pruning Metric. We now formalize the notion of attention sinks used in our pruning criterion. We begin by computing the attention mass received by each token position. At denoising step t, the cumulative attention score of token j in head h of layer ℓ is: where</p><formula xml:id="formula_9">Ā(t,ℓ,h) j = 1 S S i=1 A (t,ℓ,h) i,j ,<label>(8)</label></formula><formula xml:id="formula_10">A (t,ℓ,h) i,j</formula><p>is the attention weight from query position i to key position j and S is the sequence length. We aggregate across all layers and heads to obtain a position-level attention mass:</p><formula xml:id="formula_11">m t (j) = L ℓ=1 H h=1 Ā(t,ℓ,h) j ,<label>(9)</label></formula><p>A token j is considered a sink token at step t if its attention mass significantly exceeds that of other positions, i.e.,</p><formula xml:id="formula_12">m t (j) &gt; 1 S -1 k̸ =j m t (k) + ϵ,<label>(10)</label></formula><p>where ϵ &gt; 0 controls the detection sensitivity. To obtain a differentiable relaxation, we convert this criterion into a soft sink score via a sigmoid:</p><formula xml:id="formula_13">ϕ t (j) = σ   (m t (j) - 1 S -1 k̸ =j m t (k) -ϵ   ,<label>(11)</label></formula><p>We evaluate (11) on noised calibration inputs at a uniformly spaced set of timesteps T ⊂ {1, . . . , T } and average to obtain a step-invariant sink estimate:</p><formula xml:id="formula_14">φ(k) = 1 |T | t∈T ϕ t (k). (<label>12</label></formula><formula xml:id="formula_15">)</formula><p>Sink-Aware Importance Reweighting. Given the soft sink score φ(j), we define a per-position weight</p><formula xml:id="formula_16">ω j = 1 -φ(j),<label>(13)</label></formula><p>which is near zero for sink tokens and near one elsewhere. We construct a sink-masked activation X by scaling each row of the original activation X ∈ R S×C in by ω j , effectively suppressing the contribution of sink positions:</p><formula xml:id="formula_17">X j,: = ω j • X j,: , j = 1, . . . , S.<label>(14)</label></formula><p>This masked activation replaces X in existing pruning criteria. For Wanda base method, we substitute X into Eq. ( <ref type="formula">1</ref>) yields the sink-aware score</p><formula xml:id="formula_18">S ij = |W ij | • ∥ X • j ∥ 2 ,</formula><p>and pruning proceeds as before. For SparseGPT as the base approach, the empirical Hessian is computed from sink-masked inputs, H = 1 |D| n X ⊤ n X n + λI, where D is the calibration dataset, with the pruning and reconstruction procedure following Eqs. ( <ref type="formula" target="#formula_2">2</ref>)-( <ref type="formula" target="#formula_4">4</ref>) identically. By suppressing sink tokens in the Hessian, the reconstruction allocates capacity toward faithfully reproducing the layer's output on semantically meaningful positions, rather than preserving behavior on tokens whose outsized activations would otherwise dominate the second-order statistics.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="4">Experiments</head></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="4.1">Experimental Setup</head><p>Models and Benchmarks. We evaluate our sinkaware pruning method on multiple widely adopted pretrained diffusion language models (DLMs), including LLaDA <ref type="bibr" target="#b29">(Nie et al., 2025)</ref>, Dream <ref type="bibr" target="#b43">(Ye et al., 2025)</ref>, and LLaDA-1.5 <ref type="bibr" target="#b45">(Zhu et al., 2025)</ref>, as well as the multimodal unified DLM MMaDA <ref type="bibr">(Yang et al., 2025a)</ref>. For text generation and reasoning tasks, we assess the pruned models on a diverse set of standard language model benchmarks: MMLU <ref type="bibr" target="#b18">(Hendrycks et al., 2020)</ref> (5-shot), ARC-C <ref type="bibr" target="#b6">(Clark et al., 2018</ref>) (0-shot), PIQA <ref type="bibr" target="#b3">(Bisk et al., 2020</ref>) (0-shot), WinoGrande <ref type="bibr" target="#b36">(Sakaguchi et al., 2021)</ref> (0-shot), HellaSwag <ref type="bibr" target="#b44">(Zellers et al., 2019)</ref> (0-shot), RACE <ref type="bibr" target="#b20">(Lai et al., 2017</ref>) (0shot), GSM8K <ref type="bibr" target="#b7">(Cobbe et al., 2021)</ref> (5-shot), and GPQA <ref type="bibr" target="#b32">(Rein et al., 2024)</ref> (5-shot).</p><p>Baselines and Implementation Details. We compare our method against several widely used pruning baselines, including Wanda <ref type="bibr" target="#b37">(Sun et al., 2023)</ref>, SparseGPT <ref type="bibr" target="#b9">(Frantar and Alistarh, 2023)</ref>, and magnitude-based pruning. All baselines are implemented based on the open-source codebases of Wanda and SparseGPT for fair comparison.</p><p>For sink-aware pruning, we derive importance scores from attention maps aggregated across all layers and heads, and apply the resulting pruning masks uniformly to all pruned layers, including both feed-forward and attention layers. Importance scores are computed using a calibration set drawn from WikiText-2 <ref type="bibr" target="#b26">(Merity et al., 2016)</ref> data is used for all baselines to ensure a controlled and fair comparison. We evaluate both unstructured and structured pruning settings. For unstructured pruning, we consider sparsity ratios of 25%, 50%, and 75%. For structured pruning, following prior work, we evaluate multiple pruning levels corresponding to progressively removing structured components of the model. All experiments are conducted under identical configurations across models and benchmarks, and all results are reported using the same evaluation protocols.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="4.2">Pruning Results</head><p>Unstructured Pruning. Tables 1-5 report unstructured pruning results across all models and benchmarks. Sink-aware pruning consistently matches or surpasses the corresponding baselines at every sparsity level, demonstrating that accounting for the transient, denoising-step-dependent nature of attention sinks in DLMs yields more faithful compressed models than criteria designed for static AR-style sinks. The gains are most pronounced at moderate-to-high sparsity (50%-75%), where aggressive compression amplifies the cost of naively removing weights that serve unstable but functionally critical sink positions. At lower sparsity (25%), the advantage narrows and is occasionally marginal, consistent with our observation that sink instability is not equally pronounced across all layers and model families, when the sparsity budget is generous, even standard importance criteria can avoid the most harmful removals. At 75% sparsity, all methods degrade substantially, yet sink-aware pruning remains among the top-performing approaches, suggesting that discounting transient sinks provides a more principled lower bound on model utility under extreme compression. Importantly, the improvements are consistent across both Wanda and SparseGPT backbones, indicating that sink-aware masking acts as a general-purpose correction that complements existing importance scoring rather than being tied to a specific pruning criterion.    consistently outperforms the structured baseline, with the margin growing at higher pruning ratios (0.3→0.5). This trend is intuitive: structured pruning removes entire heads or layers at once, making each decision considerably more disruptive than removing individual weights, and therefore more sensitive to whether sink-critical components are retained. The growing improvement at higher ratios further reinforces our broader observation that sink-aware pruning is most valuable precisely when compression is aggressive, and the cost of misidentifying important structures is highest.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>Structured Pruning.</head></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="4.3">Visualization and Analysis</head><p>Fig. <ref type="figure" target="#fig_7">6</ref> reveals a clear and consistent pattern: Sink-Aware pruning reliably improves over strong baselines across models and sparsity levels, with gains that grow as compression becomes more aggressive. The most notable improvements appear at 75% sparsity, where preserving structurally critical parameters has the greatest impact, most evidently on LLaDA-1.5 under Wanda. At lower sparsity levels (25% to 50%), gains are smaller but remain broadly positive, suggesting that the sink-aware signal usefully complements existing importance criteria even in less demanding regimes. Fig. <ref type="figure" target="#fig_8">7</ref> and Fig. <ref type="figure" target="#fig_9">8</ref> show how Sink-Aware pruning alters head-level pruning decisions under a 50% unstructured sparsity setting on LLaDA-8B. The result suggests a partial alignment between sink strength patterns and mask disagreement for Wanda, whereas the correspondence appears weaker for SparseGPT. The sparsity difference  plot also indicates that Sink-Aware Pruning introduces smaller head-level pruning ratio changes for SparseGPT compared to Wanda. Discussion. Our results suggest that sink behavior is generation-paradigm dependent. In AR models, sinks are typically stable prefix anchors, in DLMs, sink positions shift across denoising steps and are often transient. This explains why directly inheriting AR-style "always keep sinks" heuristics can be suboptimal for diffusion pruning. By discounting unstable sinks, our Sink-Aware Pruning preserves a larger fraction of semantically useful parameters under the same sparsity budget, especially at moderate-to-high pruning levels.</p><p>We also observe that improvements are not uniform across all settings. On some modelbenchmark pairs (particularly in low-sparsity regimes), sink-aware variants are close to or slightly below strong baselines, indicating that sink instability is not equally pronounced in every layer, task, or model family. This points to a practical trade-off: sink-aware pruning is most beneficial when compression is aggressive or when diffusiontime attention dynamics are highly non-stationary.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="5">Conclusion</head><p>We revisited pruning for Diffusion Language Models from the perspective of attention-sink dynamics. Our analysis shows that sink positions in DLMs are substantially less stable than in AR models, which challenges the common sink-preservation heuristic inherited from AR pruning. Based on this observation, we proposed Sink-Aware Pruning, a diffusion-oriented strategy that discounts unstable sinks when estimating pruning importance. Across multiple DLM families, benchmarks, and sparsity levels, the proposed method consistently improves or matches strong baselines while yielding a better quality-efficiency trade-off without retraining. These findings highlight that pruning rules should be aligned with generation dynamics rather than directly transferred across paradigms.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>Limitations</head><p>Our current study has several limitations. First, sink statistics are estimated from a fixed calibration distribution, and distribution shift may reduce reliability. Second, we mainly evaluate post-training pruning without recovery finetuning. Combining sinkaware scoring with lightweight post-pruning adaptation may further improve robustness. Moreover, while we include one multimodal DLM, broader validation on larger multimodal and long-context settings is still needed. Future work can explore layer-wise timestep-adaptive sink policies and joint optimization with quantization to further improve the quality-efficiency frontier.</p><p>• PIQA <ref type="bibr" target="#b3">(Bisk et al., 2020)</ref> tests physical commonsense reasoning via multiple-choice questions about everyday situations, selecting the more plausible solution among two candidate answers.</p><p>• WinoGrande <ref type="bibr" target="#b36">(Sakaguchi et al., 2021)</ref> measures commonsense coreference and pronoun resolution using adversarially filtered, multiple-choice Winograd-style sentence pairs.</p><p>• HellaSwag <ref type="bibr" target="#b44">(Zellers et al., 2019)</ref> assesses commonsense inference by selecting the most plausible continuation of a given context from multiple candidate endings.</p><p>• RACE <ref type="bibr" target="#b20">(Lai et al., 2017</ref>) is a reading comprehension benchmark derived from English examinations, requiring multi-sentence reasoning over passages with multiple-choice questions.</p><p>• GSM8K <ref type="bibr" target="#b7">(Cobbe et al., 2021)</ref> evaluates multistep mathematical reasoning on grade-school word problems; performance is typically measured by exact match on the final numeric answer.</p><p>• GPQA <ref type="bibr" target="#b32">(Rein et al., 2024</ref>) is a challenging, domain-expert-written benchmark of graduate-level multiple-choice questions in biology, physics, and chemistry, designed to be difficult to solve via simple lookup.</p></div><figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_0"><head>Figure 1 :</head><label>1</label><figDesc>Figure 1: Illustration of attention sink behaviors in Diffusion Language Models. Ours Sink-Aware Pruning reduces sink variance by downscaling unstable sinks.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_1"><head>Figure 2 :</head><label>2</label><figDesc>Figure 2: Attention sink heatmap dynamics across generation steps for AR LLM (LLaMA-3-8B) and DLM (LLaDA).For each model, we show 3 different generation stages (25, 50, and 75% of the total generation steps) and plot the attention mass received by each token position (y-axis) across all heads/layers (x-axis). In LLaMA, the sink position (deep-blue vertical band) is stable across steps, while in LLaDA, the sink position shifts significantly across diffusion steps, indicating higher sink variance. The step in AR model refers to the generation process.</figDesc><graphic coords="2,110.23,227.74,109.49,109.49" type="bitmap" /></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_3"><head>Figure 3 :</head><label>3</label><figDesc>Figure3: Overview of Sink-Aware Pruning. Given input activations, we compute per-token attention mass aggregated across all layers and heads (Step 1), identify sink tokens via a threshold-based criterion, and derive a soft down-weighting factor ω = 1 -s. The original activation X is then suppressed at sink positions to produce a new activation X (Step 2), which is substituted into existing pruning criteria, Wanda or SparseGPT, to compute sink-aware importance scores (Step 3). Final pruning decisions are made based on the updated scores (Step 4).</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_4"><head></head><label></label><figDesc>Variance of total attention received by each token across all the generation/denoising steps.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_5"><head>Figure 4 :</head><label>4</label><figDesc>Figure 4: Attention sink variance for diffusion LMs (LLaDA, Dream) and autoregressive LMs (Llama 3.1, Qwen 2.5).</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_6"><head>Figure 5 :</head><label>5</label><figDesc>Figure 5: Sink position across generation/denoising steps for diffusion and AR LMs. Shaded regions denote ± std across runs.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_7"><head>Figure 6 :</head><label>6</label><figDesc>Figure 6: Delta vs. baseline on average accuracy. Average accuracy change (∆Avg, in percentage points) from applying Sink-Aware pruning on top of each baseline (WANDA / SPARSEGPT) at different sparsity levels. Bars report ∆ = Avg(Sink-Aware) -Avg(baseline); positive values indicate improved performance retention after pruning. Results are shown for LLaDA, Dream, and LLaDA1.5 over 8 benchmarks.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_8"><head>Figure 7 :</head><label>7</label><figDesc>Figure 7: Sink strength and per-head mask disagreement (XOR) between baseline and sink-aware pruning.The left subfigure shows the sink strength of the original LLaDA-8B model, measured as the average attention each head allocates to sink tokens. The center and right show the fraction of weights per head whose pruning decision differs (XOR) between the baseline and our method, using Wanda (center) and SparseGPT (right), respectively.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_9"><head>Figure 8 :</head><label>8</label><figDesc>Figure 8: Per-head sparsity difference between baseline and sink-aware pruning. The left and right subfigures show the signed per-head sparsity difference for Wanda and SparseGPT, respectively. Red indicates that the sink-aware variant prunes more aggressively in a given head, while blue indicates it preserves more weights.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" type="table" xml:id="tab_1"><head>Table 1 :</head><label>1</label><figDesc>, consisting of 128 randomly sampled sequences each truncated to a length of 2048 tokens. The same calibration Pruning results on LLaDA across 8 benchmarks.</figDesc><table><row><cell cols="2">Sparsity Method</cell><cell cols="5">Avg. MMLU ARC-C PIQA WinoG GSM8K HellaSwag GPQA RACE</cell></row><row><cell cols="2">Dense Base</cell><cell>57.93 65.97</cell><cell>43.00 74.10 69.30</cell><cell>69.29</cell><cell>72.70</cell><cell>30.40 38.70</cell></row><row><cell></cell><cell>Wanda</cell><cell>57.43 65.20</cell><cell>43.94 75.30 68.59</cell><cell>66.03</cell><cell>71.95</cell><cell>29.85 38.55</cell></row><row><cell></cell><cell cols="2">Sink-Aware 57.62 65.41</cell><cell>43.52 74.97 68.59</cell><cell>68.16</cell><cell>72.30</cell><cell>29.70 38.32</cell></row><row><cell>0.25</cell><cell cols="2">SparseGPT 57.23 65.16</cell><cell>43.09 74.43 67.56</cell><cell>67.17</cell><cell>72.10</cell><cell>30.25 38.10</cell></row><row><cell></cell><cell cols="2">Sink-Aware 57.68 65.33</cell><cell>43.09 74.37 69.53</cell><cell>68.58</cell><cell>71.98</cell><cell>30.12 38.40</cell></row><row><cell></cell><cell>Wanda</cell><cell>52.70 61.43</cell><cell>39.08 72.63 64.56</cell><cell>57.01</cell><cell>67.52</cell><cell>27.15 32.20</cell></row><row><cell></cell><cell cols="2">Sink-Aware 53.18 62.16</cell><cell>41.38 73.18 65.27</cell><cell>55.88</cell><cell>67.18</cell><cell>27.95 32.45</cell></row><row><cell>0.50</cell><cell cols="2">SparseGPT 52.34 60.97</cell><cell>39.68 72.20 64.64</cell><cell>53.53</cell><cell>66.90</cell><cell>27.70 33.10</cell></row><row><cell></cell><cell cols="2">Sink-Aware 52.36 60.79</cell><cell>39.59 72.95 65.82</cell><cell>52.11</cell><cell>67.35</cell><cell>27.48 32.82</cell></row><row><cell></cell><cell>Wanda</cell><cell>29.99 24.76</cell><cell>18.52 56.69 47.43</cell><cell>0.99</cell><cell>45.25</cell><cell>22.85 23.45</cell></row><row><cell></cell><cell cols="2">Sink-Aware 30.94 24.01</cell><cell>18.77 59.96 49.17</cell><cell>1.52</cell><cell>46.85</cell><cell>23.10 24.10</cell></row><row><cell>0.75</cell><cell cols="2">SparseGPT 32.57 28.60</cell><cell>20.99 61.75 50.04</cell><cell>1.52</cell><cell>48.20</cell><cell>23.90 25.55</cell></row><row><cell></cell><cell cols="2">Sink-Aware 32.57 28.93</cell><cell>21.08 60.12 51.07</cell><cell>1.90</cell><cell>48.70</cell><cell>23.55 25.20</cell></row><row><cell cols="2">Sparsity Method</cell><cell cols="5">Avg. MMLU ARC-C PIQA WinoG GSM8K HellaSwag GPQA RACE</cell></row><row><cell cols="2">Dense Base</cell><cell>60.94 68.25</cell><cell>55.20 74.27 67.72</cell><cell>67.50</cell><cell>73.30</cell><cell>36.60 44.70</cell></row><row><cell></cell><cell>Wanda</cell><cell>51.58 60.90</cell><cell>41.64 68.12 60.38</cell><cell>49.13</cell><cell>65.40</cell><cell>30.85 36.20</cell></row><row><cell></cell><cell cols="2">Sink-Aware 51.68 60.84</cell><cell>42.83 68.82 59.75</cell><cell>49.66</cell><cell>65.15</cell><cell>30.52 35.85</cell></row><row><cell>0.50</cell><cell cols="2">SparseGPT 54.40 64.13</cell><cell>44.88 70.18 63.54</cell><cell>52.84</cell><cell>68.72</cell><cell>32.48 38.42</cell></row><row><cell></cell><cell cols="2">Sink-Aware 54.58 64.46</cell><cell>44.97 70.18 64.09</cell><cell>53.15</cell><cell>68.35</cell><cell>32.90 38.58</cell></row><row><cell></cell><cell>Wanda</cell><cell>30.38 23.96</cell><cell>20.65 53.43 52.17</cell><cell>1.06</cell><cell>45.12</cell><cell>23.50 23.15</cell></row><row><cell></cell><cell cols="2">Sink-Aware 30.52 24.10</cell><cell>21.08 52.99 52.25</cell><cell>1.14</cell><cell>46.05</cell><cell>23.72 22.80</cell></row><row><cell>0.75</cell><cell cols="2">SparseGPT 31.72 26.92</cell><cell>22.18 54.52 51.30</cell><cell>1.44</cell><cell>48.20</cell><cell>24.30 24.90</cell></row><row><cell></cell><cell cols="2">Sink-Aware 31.83 28.02</cell><cell>21.25 54.73 51.93</cell><cell>1.59</cell><cell>47.90</cell><cell>24.65 24.55</cell></row></table></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" type="table" xml:id="tab_2"><head>Table 2 :</head><label>2</label><figDesc>Pruning results on Dream across 8 benchmarks.</figDesc><table /></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" type="table" xml:id="tab_3"><head></head><label></label><figDesc>Table 4 presents structured pruning results on LLaDA. Sink-aware pruning</figDesc><table><row><cell cols="2">Sparsity Method</cell><cell cols="5">Avg. MMLU ARC-C PIQA WinoG GSM8K HellaSwag GPQA RACE</cell></row><row><cell cols="2">Dense Base</cell><cell>58.59 64.07</cell><cell>50.43 73.61 68.90</cell><cell>65.73</cell><cell>74.43</cell><cell>31.75 39.87</cell></row><row><cell></cell><cell>Wanda</cell><cell>58.09 63.30</cell><cell>51.37 74.81 68.19</cell><cell>62.47</cell><cell>73.68</cell><cell>31.20 39.72</cell></row><row><cell></cell><cell cols="2">Sink-Aware 58.22 63.41</cell><cell>51.54 74.97 68.27</cell><cell>62.70</cell><cell>73.55</cell><cell>31.30 40.05</cell></row><row><cell>0.25</cell><cell cols="2">SparseGPT 58.44 63.62</cell><cell>52.05 74.97 68.51</cell><cell>63.08</cell><cell>73.92</cell><cell>31.55 39.85</cell></row><row><cell></cell><cell cols="2">Sink-Aware 58.47 63.59</cell><cell>52.05 74.97 68.68</cell><cell>63.23</cell><cell>73.78</cell><cell>31.62 39.80</cell></row><row><cell></cell><cell>Wanda</cell><cell>53.78 59.04</cell><cell>47.27 72.69 66.85</cell><cell>51.63</cell><cell>69.55</cell><cell>28.35 34.82</cell></row><row><cell></cell><cell cols="2">Sink-Aware 54.02 58.67</cell><cell>48.63 73.39 66.93</cell><cell>52.01</cell><cell>69.38</cell><cell>28.48 34.65</cell></row><row><cell>0.50</cell><cell cols="2">SparseGPT 53.91 59.20</cell><cell>48.46 72.63 65.19</cell><cell>52.24</cell><cell>69.20</cell><cell>28.92 35.45</cell></row><row><cell></cell><cell cols="2">Sink-Aware 54.10 59.33</cell><cell>49.15 73.12 65.43</cell><cell>52.69</cell><cell>69.15</cell><cell>28.70 35.20</cell></row><row><cell></cell><cell>Wanda</cell><cell>31.03 25.87</cell><cell>19.62 59.09 49.09</cell><cell>1.14</cell><cell>46.80</cell><cell>23.15 23.50</cell></row><row><cell></cell><cell cols="2">Sink-Aware 32.89 27.20</cell><cell>24.91 61.37 51.93</cell><cell>1.29</cell><cell>48.30</cell><cell>23.80 24.35</cell></row><row><cell>0.75</cell><cell cols="2">SparseGPT 33.94 29.85</cell><cell>26.88 61.21 52.09</cell><cell>1.67</cell><cell>49.85</cell><cell>24.05 25.90</cell></row><row><cell></cell><cell cols="2">Sink-Aware 33.63 29.08</cell><cell>25.77 61.86 51.38</cell><cell>1.52</cell><cell>49.50</cell><cell>24.25 25.65</cell></row></table></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" type="table" xml:id="tab_4"><head>Table 3 :</head><label>3</label><figDesc>Pruning results on LLaDA1.5 across 8 benchmarks.</figDesc><table><row><cell>Avg (pp) (Sink-Aware baseline)</cell><cell>0 1 2</cell><cell>25% +0.19 +0.45</cell><cell>50% Sparsity +0.48 +0.02 LLaDA</cell><cell>75% +0.95 +0.00</cell><cell>50% +0.10 +0.18 Sparsity +0.14 75% +0.11 Dream Wanda SparseGPT</cell><cell>25% +0.13 +0.03</cell><cell>50% Sparsity +0.24 +0.19 LLaDA1.5</cell><cell>75% -0.31 +1.86</cell></row></table></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" type="table" xml:id="tab_5"><head>Table 4 :</head><label>4</label><figDesc>Structured pruning results on LLaDA.</figDesc><table /></figure>
+		</body>
+		<back>
+			<div type="annex">
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>Appendix A Results on Additional Models</head><p>Table <ref type="table">5</ref> reports pruning results on MMaDA, a multimodal unified diffusion language model, complementing the main-paper results on LLaDA, Dream, and LLaDA-1.5.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>B Evaluation Details</head><p>For loglikelihood-based evaluations (MMLU, ARC-C, PIQA, WinoGrande, HellaSwag, RACE, and GPQA), we build on the official model implementations provided in the LLaDA 1 and Dream 2 GitHub repositories. For generation-based tasks (GSM8K), we leverage Fast-DLLM <ref type="bibr" target="#b38">(Wu et al., 2025)</ref> to enable fast inference. All evaluations are conducted using the lm-evaluation-harness <ref type="bibr" target="#b11">(Gao et al., 2024)</ref> framework under identical configurations across all models and baselines.</p><p>For generation tasks, we use a generation length of 256 tokens, a block length of 256, and 256 denoising steps. For loglikelihood-based benchmarks, we follow the Monte Carlo estimation protocol with 128 samples across all tasks, except for MMLU where we use a single sample following the evaluation convention established in the official LLaDA codebase.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>C Model Architecture Details</head><p>All models use a decoder-only Transformer backbone as the denoising network (mask predictor) in 1 https://github.com/ML-GSAI/LLaDA 2 https://github.com/DreamLM/Dream discrete diffusion. For LLaDA, the architecture follows a LLaMA-style design with RMSNorm, SwiGLU feed-forward blocks, and RoPE positional encoding <ref type="bibr" target="#b29">(Nie et al., 2025)</ref>. Dream-7B adopts the same base configuration as Qwen2.5-7B <ref type="bibr" target="#b43">(Ye et al., 2025;</ref><ref type="bibr" target="#b40">Yang et al., 2024)</ref>. MMaDA-8B follows the LLaDA configuration for text generation and is initialized from an LLaDA-8B checkpoint <ref type="bibr">(Yang et al., 2025a)</ref>. Table <ref type="table">6</ref> shows the total number of trainable parameters, the number of Transformer layers L, and the model width d model .</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>Model</head><p>Params </p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>D Benchmark Descriptions</head><p>We evaluate text generation and reasoning using a diverse suite of established benchmarks:</p><p>• MMLU <ref type="bibr" target="#b18">(Hendrycks et al., 2020)</ref> evaluates broad factual knowledge and reasoning across 57 academic subjects using multiple-choice questions, and is commonly reported in fewshot settings.</p><p>• ARC-C <ref type="bibr" target="#b6">(Clark et al., 2018</ref>) (AI2 Reasoning Challenge, Challenge split) consists of multiple-choice grade-school science questions designed to require non-trivial reasoning beyond surface pattern matching.</p></div>			</div>
+			<div type="references">
+
+				<listBibl>
+
+<biblStruct xml:id="b0">
+	<monogr>
+		<title level="m" type="main">Block diffusion: Interpolating between autoregressive and diffusion language models</title>
+		<author>
+			<persName><forename type="first">Marianne</forename><surname>Arriola</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Aaron</forename><surname>Gokaslan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Justin</forename><forename type="middle">T</forename><surname>Chiu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Zhihan</forename><surname>Yang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Zhixuan</forename><surname>Qi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jiaqi</forename><surname>Han</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Subham</forename><surname>Sekhar Sahoo</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Volodymyr</forename><surname>Kuleshov</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2503.09573</idno>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b1">
+	<analytic>
+		<title level="a" type="main">Structured denoising diffusion models in discrete state-spaces</title>
+		<author>
+			<persName><forename type="first">Jacob</forename><surname>Austin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jonathan</forename><surname>Daniel D Johnson</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Daniel</forename><surname>Ho</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Rianne</forename><surname>Tarlow</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Van Den</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Berg</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">Advances in neural information processing systems</title>
+		<imprint>
+			<biblScope unit="volume">34</biblScope>
+			<biblScope unit="page" from="17981" to="17993" />
+			<date type="published" when="2021">2021</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b2">
+	<monogr>
+		<author>
+			<persName><forename type="first">Federico</forename><surname>Barbero</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Alvaro</forename><surname>Arroyo</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Xiangming</forename><surname>Gu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Christos</forename><surname>Perivolaropoulos</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Michael</forename><surname>Bronstein</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Petar</forename><surname>Veličković</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Razvan</forename><surname>Pascanu</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2504.02732</idno>
+		<title level="m">Why do llms attend to the first token?</title>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b3">
+	<analytic>
+		<title level="a" type="main">Piqa: Reasoning about physical commonsense in natural language</title>
+		<author>
+			<persName><forename type="first">Yonatan</forename><surname>Bisk</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Rowan</forename><surname>Zellers</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jianfeng</forename><surname>Gao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Yejin</forename><surname>Choi</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of the AAAI conference on artificial intelligence</title>
+		<meeting>the AAAI conference on artificial intelligence</meeting>
+		<imprint>
+			<date type="published" when="2020">2020</date>
+			<biblScope unit="volume">34</biblScope>
+			<biblScope unit="page" from="7432" to="7439" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b4">
+	<analytic>
+		<title level="a" type="main">A survey on deep neural network pruning: Taxonomy, comparison, analysis, and recommendations</title>
+		<author>
+			<persName><forename type="first">Hongrong</forename><surname>Cheng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Miao</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Javen Qinfeng</forename><surname>Shi</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">IEEE Transactions on Pattern Analysis and Machine Intelligence</title>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b5">
+	<monogr>
+		<title level="m" type="main">Sdar: A synergistic diffusion-autoregression paradigm for scalable sequence generation</title>
+		<author>
+			<persName><forename type="first">Shuang</forename><surname>Cheng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Yihan</forename><surname>Bian</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Dawei</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Linfeng</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Qian</forename><surname>Yao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Zhongbo</forename><surname>Tian</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Wenhai</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Qipeng</forename><surname>Guo</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Kai</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Biqing</forename><surname>Qi</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2510.06303</idno>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b6">
+	<monogr>
+		<author>
+			<persName><forename type="first">Peter</forename><surname>Clark</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Isaac</forename><surname>Cowhey</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Oren</forename><surname>Etzioni</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Tushar</forename><surname>Khot</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Ashish</forename><surname>Sabharwal</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Carissa</forename><surname>Schoenick</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Oyvind</forename><surname>Tafjord</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:1803.05457</idno>
+		<title level="m">Think you have solved question answering? try arc, the ai2 reasoning challenge</title>
+		<imprint>
+			<date type="published" when="2018">2018</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b7">
+	<monogr>
+		<author>
+			<persName><forename type="first">Karl</forename><surname>Cobbe</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Vineet</forename><surname>Kosaraju</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Mohammad</forename><surname>Bavarian</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Mark</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Heewoo</forename><surname>Jun</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Lukasz</forename><surname>Kaiser</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Matthias</forename><surname>Plappert</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jerry</forename><surname>Tworek</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jacob</forename><surname>Hilton</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Reiichiro</forename><surname>Nakano</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2110.14168</idno>
+		<title level="m">Training verifiers to solve math word problems</title>
+		<imprint>
+			<date type="published" when="2021">2021</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b8">
+	<monogr>
+		<title level="m" type="main">Beyond size: How gradients shape pruning decisions in large language models</title>
+		<author>
+			<persName><forename type="first">Jyoti</forename><surname>Rocktim</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Mingjie</forename><surname>Das</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Liqun</forename><surname>Sun</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Zhiqiang</forename><surname>Ma</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Shen</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2311.04902</idno>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b9">
+	<analytic>
+		<title level="a" type="main">Sparsegpt: Massive language models can be accurately pruned in one-shot</title>
+		<author>
+			<persName><forename type="first">Elias</forename><surname>Frantar</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Dan</forename><surname>Alistarh</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">International conference on machine learning</title>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+			<biblScope unit="page" from="10323" to="10337" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b10">
+	<monogr>
+		<title/>
+		<author>
+			<persName><surname>Pmlr</surname></persName>
+		</author>
+		<imprint/>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b11">
+	<monogr>
+		<title level="m" type="main">The language model evaluation harness</title>
+		<author>
+			<persName><forename type="first">Leo</forename><surname>Gao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jonathan</forename><surname>Tow</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Stella</forename><surname>Baber Abbasi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Sid</forename><surname>Biderman</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Anthony</forename><surname>Black</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Charles</forename><surname>Dipofi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Laurence</forename><surname>Foster</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jeffrey</forename><surname>Golding</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Alain</forename><surname>Hsu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Haonan</forename><surname>Le Noac'h</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Kyle</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Niklas</forename><surname>Mcdonell</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Chris</forename><surname>Muennighoff</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jason</forename><surname>Ociepa</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Laria</forename><surname>Phang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Hailey</forename><surname>Reynolds</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Aviya</forename><surname>Schoelkopf</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Lintang</forename><surname>Skowron</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">;</forename><surname>Sutawika</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Others</surname></persName>
+		</author>
+		<idno type="DOI">10.5281/zenodo.12608602</idno>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+			<biblScope unit="page">5</biblScope>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b12">
+	<monogr>
+		<title level="m" type="main">Diffuseq: Sequence to sequence text generation with diffusion models</title>
+		<author>
+			<persName><forename type="first">Shansan</forename><surname>Gong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Mukai</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jiangtao</forename><surname>Feng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Zhiyong</forename><surname>Wu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Lingpeng</forename><surname>Kong</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2210.08933</idno>
+		<imprint>
+			<date type="published" when="2022">2022</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b13">
+	<monogr>
+		<author>
+			<persName><forename type="first">Xiangming</forename><surname>Gu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Tianyu</forename><surname>Pang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Chao</forename><surname>Du</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Qian</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Fengzhuo</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Cunxiao</forename><surname>Du</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Ye</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Min</forename><surname>Lin</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2410.10781</idno>
+		<title level="m">When attention sink emerges in language models: An empirical view</title>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b14">
+	<monogr>
+		<author>
+			<persName><forename type="first">Song</forename><surname>Han</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Huizi</forename><surname>Mao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">William</forename><forename type="middle">J</forename><surname>Dally</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:1510.00149</idno>
+		<title level="m">Deep compression: Compressing deep neural networks with pruning, trained quantization and huffman coding</title>
+		<imprint>
+			<date type="published" when="2015">2015</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b15">
+	<analytic>
+		<title level="a" type="main">Learning both weights and connections for efficient neural network</title>
+		<author>
+			<persName><forename type="first">Song</forename><surname>Han</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jeff</forename><surname>Pool</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">John</forename><surname>Tran</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">William</forename><surname>Dally</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">Advances in neural information processing systems</title>
+		<imprint>
+			<biblScope unit="volume">28</biblScope>
+			<date type="published" when="2015">2015</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b16">
+	<analytic>
+		<title level="a" type="main">Optimal brain surgeon and general network pruning</title>
+		<author>
+			<persName><forename type="first">Babak</forename><surname>Hassibi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">David</forename><forename type="middle">G</forename><surname>Stork</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Gregory</forename><forename type="middle">J</forename><surname>Wolff</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">IEEE international conference on neural networks</title>
+		<imprint>
+			<publisher>IEEE</publisher>
+			<date type="published" when="1993">1993</date>
+			<biblScope unit="page" from="293" to="299" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b17">
+	<analytic>
+		<title level="a" type="main">Diffusionbert: Improving generative masked language models with diffusion models</title>
+		<author>
+			<persName><forename type="first">Zhengfu</forename><surname>He</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Tianxiang</forename><surname>Sun</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Qiong</forename><surname>Tang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Kuanning</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Xuan-Jing</forename><surname>Huang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Xipeng</forename><surname>Qiu</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of the 61st annual meeting of the association for computational linguistics</title>
+		<meeting>the 61st annual meeting of the association for computational linguistics</meeting>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+			<biblScope unit="volume">1</biblScope>
+			<biblScope unit="page" from="4521" to="4534" />
+		</imprint>
+	</monogr>
+	<note>Long papers</note>
+</biblStruct>
+
+<biblStruct xml:id="b18">
+	<monogr>
+		<author>
+			<persName><forename type="first">Dan</forename><surname>Hendrycks</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Collin</forename><surname>Burns</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Steven</forename><surname>Basart</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Andy</forename><surname>Zou</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Mantas</forename><surname>Mazeika</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Dawn</forename><surname>Song</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jacob</forename><surname>Steinhardt</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2009.03300</idno>
+		<title level="m">Measuring massive multitask language understanding</title>
+		<imprint>
+			<date type="published" when="2020">2020</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b19">
+	<analytic>
+		<title level="a" type="main">Denoising diffusion probabilistic models</title>
+		<author>
+			<persName><forename type="first">Jonathan</forename><surname>Ho</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Ajay</forename><surname>Jain</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Pieter</forename><surname>Abbeel</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">Advances in neural information processing systems</title>
+		<imprint>
+			<biblScope unit="volume">33</biblScope>
+			<biblScope unit="page" from="6840" to="6851" />
+			<date type="published" when="2020">2020</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b20">
+	<analytic>
+		<title level="a" type="main">RACE: Large-scale ReAding comprehension dataset from examinations</title>
+		<author>
+			<persName><forename type="first">Guokun</forename><surname>Lai</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Qizhe</forename><surname>Xie</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Hanxiao</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Yiming</forename><surname>Yang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Eduard</forename><surname>Hovy</surname></persName>
+		</author>
+		<idno type="DOI">10.18653/v1/D17-1082</idno>
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of the 2017 Conference on Empirical Methods in Natural Language Processing</title>
+		<meeting>the 2017 Conference on Empirical Methods in Natural Language Processing<address><addrLine>Copenhagen, Denmark</addrLine></address></meeting>
+		<imprint>
+			<publisher>Association for Computational Linguistics</publisher>
+			<date type="published" when="2017">2017</date>
+			<biblScope unit="page" from="785" to="794" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b21">
+	<analytic>
+		<title level="a" type="main">Optimal brain damage</title>
+		<author>
+			<persName><forename type="first">Yann</forename><surname>Lecun</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">John</forename><surname>Denker</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Sara</forename><surname>Solla</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">Advances in neural information processing systems</title>
+		<imprint>
+			<biblScope unit="volume">2</biblScope>
+			<date type="published" when="1989">1989</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b22">
+	<monogr>
+		<author>
+			<persName><forename type="first">Tianyi</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Mingda</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Bowei</forename><surname>Guo</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Zhiqiang</forename><surname>Shen</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2508.10875</idno>
+		<title level="m">A survey on diffusion language models</title>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b23">
+	<analytic>
+		<title level="a" type="main">Diffusionlm improves controllable text generation</title>
+		<author>
+			<persName><forename type="first">Xiang</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">John</forename><surname>Thickstun</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Ishaan</forename><surname>Gulrajani</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Percy</forename><forename type="middle">S</forename><surname>Liang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Tatsunori B</forename><surname>Hashimoto</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">Advances in neural information processing systems</title>
+		<imprint>
+			<biblScope unit="volume">35</biblScope>
+			<biblScope unit="page" from="4328" to="4343" />
+			<date type="published" when="2022">2022</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b24">
+	<analytic>
+		<title level="a" type="main">Learning efficient convolutional networks through network slimming</title>
+		<author>
+			<persName><forename type="first">Zhuang</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jianguo</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Zhiqiang</forename><surname>Shen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Gao</forename><surname>Huang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Shoumeng</forename><surname>Yan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Changshui</forename><surname>Zhang</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of the IEEE international conference on computer vision</title>
+		<meeting>the IEEE international conference on computer vision</meeting>
+		<imprint>
+			<date type="published" when="2017">2017</date>
+			<biblScope unit="page" from="2736" to="2744" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b25">
+	<analytic>
+		<title level="a" type="main">Llm-pruner: On the structural pruning of large language models</title>
+		<author>
+			<persName><forename type="first">Xinyin</forename><surname>Ma</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Gongfan</forename><surname>Fang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Xinchao</forename><surname>Wang</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">Advances in neural information processing systems</title>
+		<imprint>
+			<biblScope unit="volume">36</biblScope>
+			<biblScope unit="page" from="21702" to="21720" />
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b26">
+	<monogr>
+		<author>
+			<persName><forename type="first">Stephen</forename><surname>Merity</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Caiming</forename><surname>Xiong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">James</forename><surname>Bradbury</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Richard</forename><surname>Socher</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:1609.07843</idno>
+		<title level="m">Pointer sentinel mixture models</title>
+		<imprint>
+			<date type="published" when="2016">2016</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b27">
+	<analytic>
+		<title level="a" type="main">Importance estimation for neural network pruning</title>
+		<author>
+			<persName><forename type="first">Pavlo</forename><surname>Molchanov</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Arun</forename><surname>Mallya</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Stephen</forename><surname>Tyree</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Iuri</forename><surname>Frosio</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jan</forename><surname>Kautz</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of the IEEE/CVF conference on computer vision and pattern recognition</title>
+		<meeting>the IEEE/CVF conference on computer vision and pattern recognition</meeting>
+		<imprint>
+			<date type="published" when="2019">2019</date>
+			<biblScope unit="page" from="11264" to="11272" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b28">
+	<monogr>
+		<title level="m" type="main">Diffusion language models are super data learners</title>
+		<author>
+			<persName><forename type="first">Jinjie</forename><surname>Ni</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Qian</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Longxu</forename><surname>Dou</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Chao</forename><surname>Du</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Zili</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Hang</forename><surname>Yan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Tianyu</forename><surname>Pang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Michael</forename><forename type="middle">Qizhe</forename><surname>Shieh</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2511.03276</idno>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b29">
+	<monogr>
+		<author>
+			<persName><forename type="first">Shen</forename><surname>Nie</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Fengqi</forename><surname>Zhu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Zebin</forename><surname>You</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Xiaolu</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jingyang</forename><surname>Ou</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jun</forename><surname>Hu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jun</forename><surname>Zhou</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Yankai</forename><surname>Lin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Ji-Rong</forename><surname>Wen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Chongxuan</forename><surname>Li</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2502.09992</idno>
+		<title level="m">Large language diffusion models</title>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b30">
+	<monogr>
+		<title level="m" type="main">Improving language understanding by generative pre-training</title>
+		<author>
+			<persName><forename type="first">Alec</forename><surname>Radford</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Karthik</forename><surname>Narasimhan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Tim</forename><surname>Salimans</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Ilya</forename><surname>Sutskever</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">;</forename><surname>Others</surname></persName>
+		</author>
+		<imprint>
+			<date type="published" when="2018">2018</date>
+			<biblScope unit="page">1</biblScope>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b31">
+	<analytic>
+		<title level="a" type="main">Language models are unsupervised multitask learners</title>
+		<author>
+			<persName><forename type="first">Alec</forename><surname>Radford</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jeffrey</forename><surname>Wu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Rewon</forename><surname>Child</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">David</forename><surname>Luan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Dario</forename><surname>Amodei</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Ilya</forename><surname>Sutskever</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">OpenAI blog</title>
+		<imprint>
+			<biblScope unit="volume">1</biblScope>
+			<biblScope unit="issue">8</biblScope>
+			<biblScope unit="page">9</biblScope>
+			<date type="published" when="2019">2019</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b32">
+	<analytic>
+		<title level="a" type="main">Gpqa: A graduate-level google-proof q&amp;a benchmark</title>
+		<author>
+			<persName><forename type="first">David</forename><surname>Rein</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Betty</forename><forename type="middle">Li</forename><surname>Hou</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Asa</forename><forename type="middle">Cooper</forename><surname>Stickland</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jackson</forename><surname>Petty</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Richard</forename><forename type="middle">Yuanzhe</forename><surname>Pang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Julien</forename><surname>Dirani</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Julian</forename><surname>Michael</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Samuel R Bowman</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">First conference on language modeling</title>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b33">
+	<analytic>
+		<title level="a" type="main">Highresolution image synthesis with latent diffusion models</title>
+		<author>
+			<persName><forename type="first">Robin</forename><surname>Rombach</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Andreas</forename><surname>Blattmann</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Dominik</forename><surname>Lorenz</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Patrick</forename><surname>Esser</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Björn</forename><surname>Ommer</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of the IEEE/CVF conference on computer vision and pattern recognition</title>
+		<meeting>the IEEE/CVF conference on computer vision and pattern recognition</meeting>
+		<imprint>
+			<date type="published" when="2022">2022</date>
+			<biblScope unit="page" from="10684" to="10695" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b34">
+	<monogr>
+		<author>
+			<persName><forename type="first">Maximo</forename><forename type="middle">Eduardo</forename><surname>Rulli</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Simone</forename><surname>Petruzzi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Edoardo</forename><surname>Michielon</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Fabrizio</forename><surname>Silvestri</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Simone</forename><surname>Scardapane</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Alessio</forename><surname>Devoto</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2510.15731</idno>
+		<title level="m">Attention sinks in diffusion language models</title>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b35">
+	<analytic>
+		<title level="a" type="main">Simple and effective masked diffusion language models</title>
+		<author>
+			<persName><forename type="first">Subham</forename><surname>Sahoo</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Marianne</forename><surname>Arriola</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Yair</forename><surname>Schiff</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Aaron</forename><surname>Gokaslan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Edgar</forename><surname>Marroquin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Justin</forename><surname>Chiu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Alexander</forename><surname>Rush</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Volodymyr</forename><surname>Kuleshov</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">Advances in Neural Information Processing Systems</title>
+		<imprint>
+			<biblScope unit="volume">37</biblScope>
+			<biblScope unit="page" from="130136" to="130184" />
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b36">
+	<analytic>
+		<title level="a" type="main">Winogrande: An adversarial winograd schema challenge at scale</title>
+		<author>
+			<persName><forename type="first">Keisuke</forename><surname>Sakaguchi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Le</forename><surname>Ronan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Chandra</forename><surname>Bras</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Yejin</forename><surname>Bhagavatula</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Choi</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">Communications of the ACM</title>
+		<imprint>
+			<biblScope unit="volume">64</biblScope>
+			<biblScope unit="issue">9</biblScope>
+			<biblScope unit="page" from="99" to="106" />
+			<date type="published" when="2021">2021</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b37">
+	<monogr>
+		<title level="m" type="main">A simple and effective pruning approach for large language models</title>
+		<author>
+			<persName><forename type="first">Mingjie</forename><surname>Sun</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Zhuang</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Anna</forename><surname>Bair</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J Zico</forename><surname>Kolter</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2306.11695</idno>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b38">
+	<monogr>
+		<title level="m" type="main">Fast-dllm: Training-free acceleration of diffusion llm by enabling kv cache and parallel decoding</title>
+		<author>
+			<persName><forename type="first">Chengyue</forename><surname>Wu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Hao</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Shuchen</forename><surname>Xue</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Zhijian</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Shizhe</forename><surname>Diao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Ligeng</forename><surname>Zhu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Ping</forename><surname>Luo</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Song</forename><surname>Han</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Enze</forename><surname>Xie</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2505.22618</idno>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b39">
+	<monogr>
+		<title level="m" type="main">Efficient streaming language models with attention sinks</title>
+		<author>
+			<persName><forename type="first">Guangxuan</forename><surname>Xiao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Yuandong</forename><surname>Tian</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Beidi</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Song</forename><surname>Han</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Mike</forename><surname>Lewis</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2309.17453</idno>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b40">
+	<monogr>
+		<author>
+			<persName><forename type="first">An</forename><surname>Yang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Baosong</forename><surname>Yang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Beichen</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Binyuan</forename><surname>Hui</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Bo</forename><surname>Zheng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Bowen</forename><surname>Yu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Chengyuan</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Dayiheng</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Fei</forename><surname>Huang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Haoran</forename><surname>Wei</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">;</forename><surname>Others</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2412.15115</idno>
+		<title level="m">Qwen2.5</title>
+		<imprint>
+			<date type="published" when="2024">1. 2024</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b41">
+	<monogr>
+		<author>
+			<persName><forename type="first">Ling</forename><surname>Yang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Ye</forename><surname>Tian</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Bowen</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Xinchen</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Ke</forename><surname>Shen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Yunhai</forename><surname>Tong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Mengdi</forename><surname>Wang</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2505.15809</idno>
+		<title level="m">Mmada: Multimodal large diffusion language models</title>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b42">
+	<monogr>
+		<title level="m" type="main">Wanda++: Pruning large language models via regional gradients</title>
+		<author>
+			<persName><forename type="first">Yifan</forename><surname>Yang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Kai</forename><surname>Zhen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Bhavana</forename><surname>Ganesh</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Aram</forename><surname>Galstyan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Goeric</forename><surname>Huybrechts</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Markus</forename><surname>Müller</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jonas</forename><forename type="middle">M</forename><surname>Kübler</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Rupak</forename><surname>Vignesh Swaminathan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Athanasios</forename><surname>Mouchtaris</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Sravan</forename><surname>Babu Bodapati</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2503.04992</idno>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b43">
+	<monogr>
+		<author>
+			<persName><forename type="first">Jiacheng</forename><surname>Ye</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Zhihui</forename><surname>Xie</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Lin</forename><surname>Zheng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jiahui</forename><surname>Gao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Zirui</forename><surname>Wu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Xin</forename><surname>Jiang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Zhenguo</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Lingpeng</forename><surname>Kong</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2508.15487</idno>
+		<title level="m">Dream 7b: Diffusion large language models</title>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b44">
+	<analytic>
+		<title level="a" type="main">Hellaswag: Can a machine really finish your sentence?</title>
+		<author>
+			<persName><forename type="first">Rowan</forename><surname>Zellers</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Ari</forename><surname>Holtzman</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Yonatan</forename><surname>Bisk</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Ali</forename><surname>Farhadi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Yejin</forename><surname>Choi</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of the 57th annual meeting of the association for computational linguistics</title>
+		<meeting>the 57th annual meeting of the association for computational linguistics</meeting>
+		<imprint>
+			<date type="published" when="2019">2019</date>
+			<biblScope unit="page" from="4791" to="4800" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b45">
+	<analytic>
+		<title level="a" type="main">Llada 1.5: Variance-reduced preference optimization for large language diffusion models</title>
+		<author>
+			<persName><forename type="first">Fengqi</forename><surname>Zhu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Rongzhen</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Shen</forename><surname>Nie</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Xiaolu</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Chunwei</forename><surname>Wu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jun</forename><surname>Hu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jun</forename><surname>Zhou</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jianfei</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Yankai</forename><surname>Lin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Ji-Rong</forename><surname>Wen</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2505.19223</idno>
+		<idno>48 52.50 25.20 28.50 0.25 Wanda 35.20 32.89 23.98 60.28 50.59 8.72 52.25 24.80 28.12 Sink-Aware 35.03 32.99 24.15 60.17 49.64 8.87 51.80 24.72 27.90 SparseGPT 35.48 33.30 24.57 60.39 50.91 9.10 52.05 25.15 28.35 Sink-Aware 35.45 33.30 24.83 60.34 50.67 9.17 52.10 25.00 28.20 0.50 Wanda 33.91 31.14 23.12 59.79 51.14 5.38 49.72 24.18 26.80 Sink-Aware 33.54 30.27 22.95 59.90 49.57 5.53 49.45 24.08 26.55 SparseGPT 34.05 31.33 23.81 59.36 50.04 5.84 50.25 24.55 27.20 Sink-Aware 33.77 31.24 23.72 59.41 48.86 5.76 49.90 24.30 26.95 0.75 Wanda 29.85 23.93 19.37 54.79 50.12 0.76 42.55 23.10 24.15 Sink-Aware 30.28 24.82 20.65 55.33 49.64 0.91 42.90 23.55 24.40 SparseGPT 30.26 24.01 20.39 55.77 49.01 1.06 43.48 23.40 24.95 Sink-Aware 30.19 24.51 18.86 55.82 50.04 1.14 43.15 23.28 24.70 Table 5</idno>
+	</analytic>
+	<monogr>
+		<title level="j">GPQA RACE Dense Base</title>
+		<imprint>
+			<biblScope unit="volume">35</biblScope>
+			<biblScope unit="issue">69 24</biblScope>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+	<note>Sparsity Method Avg. MMLU ARC-C PIQA WinoG GSM8K HellaSwag. Pruning results on MMaDA across 8 benchmarks</note>
+</biblStruct>
+
+				</listBibl>
+			</div>
+		</back>
+	</text>
+</TEI>
