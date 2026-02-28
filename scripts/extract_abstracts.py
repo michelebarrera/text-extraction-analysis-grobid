@@ -2,8 +2,8 @@ import os
 from lxml import etree
 
 # Ruta donde están los XML
-DATA_PATH = "/mnt/c/Michelle/UNIVERSIDAD/UNIVERSIDAD/CUARTO/IA/PapersArXiv/data"
-OUTPUT_FILE = "/mnt/c/Michelle/UNIVERSIDAD/UNIVERSIDAD/CUARTO/IA/PapersArXiv/outputs/all_abstracts.txt"
+DATA_PATH = "../data"
+OUTPUT_FILE = "../outputs/all_abstracts.txt"
 
 # Namespace TEI 
 NS = {"tei": "http://www.tei-c.org/ns/1.0"}
