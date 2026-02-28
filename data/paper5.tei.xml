@@ -1,0 +1,2975 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xml:space="preserve" xmlns="http://www.tei-c.org/ns/1.0" 
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+xsi:schemaLocation="http://www.tei-c.org/ns/1.0 https://raw.githubusercontent.com/kermitt2/grobid/master/grobid-home/schemas/xsd/Grobid.xsd"
+ xmlns:xlink="http://www.w3.org/1999/xlink">
+	<teiHeader xml:lang="en">
+		<fileDesc>
+			<titleStmt>
+				<title level="a" type="main">Reverso: Efficient Time Series Foundation Models for Zero-shot Forecasting</title>
+				<funder ref="#_s9GGmgR">
+					<orgName type="full">National Science Foundation</orgName>
+				</funder>
+				<funder>
+					<orgName type="full">Qube RT</orgName>
+				</funder>
+			</titleStmt>
+			<publicationStmt>
+				<publisher/>
+				<availability status="unknown"><licence/></availability>
+				<date type="published" when="2026-02-19">19 Feb 2026</date>
+			</publicationStmt>
+			<sourceDesc>
+				<biblStruct>
+					<analytic>
+						<author>
+							<persName><forename type="first">Xinghong</forename><surname>Fu</surname></persName>
+						</author>
+						<author>
+							<persName><forename type="first">Yanhong</forename><surname>Li</surname></persName>
+						</author>
+						<author>
+							<persName><forename type="first">Georgios</forename><surname>Papaioannou</surname></persName>
+						</author>
+						<author>
+							<persName><forename type="first">Yoon</forename><surname>Kim</surname></persName>
+						</author>
+						<title level="a" type="main">Reverso: Efficient Time Series Foundation Models for Zero-shot Forecasting</title>
+					</analytic>
+					<monogr>
+						<imprint>
+							<date type="published" when="2026-02-19">19 Feb 2026</date>
+						</imprint>
+					</monogr>
+					<idno type="MD5">4B79DF85A0352AF7333CE1538B74D5E7</idno>
+					<idno type="arXiv">arXiv:2602.17634v1[cs.LG]</idno>
+				</biblStruct>
+			</sourceDesc>
+		</fileDesc>
+		<encodingDesc>
+			<appInfo>
+				<application version="0.8.0" ident="GROBID" when="2026-02-22T21:27+0000">
+					<desc>GROBID - A machine learning software for extracting information from scholarly documents</desc>
+					<ref target="https://github.com/kermitt2/grobid"/>
+				</application>
+			</appInfo>
+		</encodingDesc>
+		<profileDesc>
+			<abstract>
+<div xmlns="http://www.tei-c.org/ns/1.0"><p>Learning time series foundation models has been shown to be a promising approach for zero-shot time series forecasting across diverse time series domains. Insofar as scaling has been a critical driver of performance of foundation models in other modalities such as language and vision, much recent work on time series foundation modeling has focused on scaling. This has resulted in time series foundation models with hundreds of millions of parameters that are, while performant, inefficient and expensive to use in practice. This paper describes a simple recipe for learning efficient foundation models for zero-shot time series forecasting that are orders of magnitude smaller. We show that large-scale transformers are not necessary: small hybrid models that interleave long convolution and linear RNN layers (in particular DeltaNet layers) can match the performance of larger transformer-based models while being more than a hundred times smaller. We also describe several data augmentation and inference strategies that further improve performance. This recipe results in Reverso, a family of efficient time series foundation models for zero-shot forecasting that significantly push the performance-efficiency Pareto frontier.</p></div>
+			</abstract>
+		</profileDesc>
+	</teiHeader>
+	<text xml:lang="en">
+		<body>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="1.">Introduction</head><p>Time series forecasting is a core problem in machine learning with widespread applications including in weather forecasting, energy grid analysis, supply chain logistics, financial predictions, and more. Traditionally, statistical models <ref type="bibr" target="#b10">(Box &amp; Jenkins, 1970;</ref><ref type="bibr" target="#b22">Engle, 1982;</ref><ref type="bibr" target="#b8">Bollerslev, 1986;</ref><ref type="bibr" target="#b33">Harvey, 1990;</ref><ref type="bibr" target="#b37">Hyndman &amp; Khandakar, 2008)</ref> as well as deep learning approaches based on RNNs <ref type="bibr" target="#b20">(Elman, 1990;</ref><ref type="bibr"></ref> 1 Massachusetts Institute of Technology 2 Allen Institute for AI 3 Qube Research &amp; Technologies. Correspondence to: Xinghong Fu &lt;fxh@mit.edu&gt;.</p><p>Preprint. <ref type="bibr" target="#b36">Hochreiter &amp; Schmidhuber, 1997;</ref><ref type="bibr" target="#b12">Cho et al., 2014)</ref> have enjoyed great success in time series forecasting <ref type="bibr" target="#b29">(Goel et al., 2017;</ref><ref type="bibr" target="#b62">Qin et al., 2017;</ref><ref type="bibr" target="#b60">Petneházi, 2019;</ref><ref type="bibr">Hewamalage et al., 2021, i.a.)</ref>. More recently, models based on the transformer architecture <ref type="bibr">(Vaswani et al., 2017)</ref> have led to further improvements <ref type="bibr" target="#b56">(Nie et al., 2023;</ref><ref type="bibr" target="#b86">Zhou et al., 2021;</ref><ref type="bibr" target="#b81">Wu et al., 2021;</ref><ref type="bibr" target="#b87">Zhou et al., 2022;</ref><ref type="bibr">Liu et al., 2022b, i.a.)</ref>.</p><p>These initial deep learning-based approaches to time series forecasting were dataset-specific, and thus trained models for particular domains/tasks of interest. While such models can attain high accuracy when sufficient in-distribution data are available, they incur substantial costs in data collection and model training/maintenance. This approach moreover stands in stark contrast to recent progress in domains such as language, vision, and biology, where foundation models pretrained on broad datasets have been found to be useful across many tasks with little or no task-specific training <ref type="bibr" target="#b9">(Bommasani, 2021)</ref>.</p><p>The successes of foundation models in other modalities have motivated the recent line of work on time series foundation models (TSFM; <ref type="bibr" target="#b26">Garza et al., 2023;</ref><ref type="bibr" target="#b2">Ansari et al., 2024;</ref><ref type="bibr" target="#b16">Das et al., 2024;</ref><ref type="bibr" target="#b48">Liu et al., 2024;</ref><ref type="bibr" target="#b80">Woo et al., 2024;</ref><ref type="bibr">Liu et al., 2025b;</ref><ref type="bibr">c;</ref><ref type="bibr" target="#b30">Graf et al., 2025;</ref><ref type="bibr" target="#b4">Auer et al., 2025;</ref><ref type="bibr">Moroshan et al., 2025, i.a.)</ref>. TSFMs are large-scale neural networks trained on heterogeneous time series data taken from broad domains (see <ref type="bibr" target="#b42">Liang et al. (2024)</ref> and <ref type="bibr" target="#b40">Kottapalli et al. (2025)</ref> for surveys). A particularly useful capability of decoder-based TSFMs is their ability to perform zero-shot forecasting via in-context learning, i.e., predicting the future given any historical time series data given as context. These TSFMs can thus serve as a domain-general tool for time series forecasting, enabling the deployment of models in domains where task-specific training data may be scarce.</p><p>However, insofar as scaling has been a critical driver of progress of foundation models in other domains, much existing work has focused on scaling TSFMs, i.e., training ever-larger models on ever-larger datasets. For example, <ref type="bibr">Sun et al. (2025)</ref> train a series of models up to 1.5B parameters and observe continuous improvements with scaling model size. While such large models can be performant, their sheer size can make them prohibitively expensive to train and deploy.  <ref type="bibr" target="#b0">(Aksu et al., 2024)</ref>. Reverso sets a new performance-efficiency Pareto frontier compared to existing time series foundation models.</p><p>In this work, we revisit the core assumption that large-scale models are necessary for TSFMs. We show that small models that interleave long convolution layers <ref type="bibr">(Fu et al., 2023b)</ref> and modern linear RNN layers (in particular DeltaNet layers <ref type="bibr" target="#b64">(Schlag et al., 2021;</ref><ref type="bibr">Yang et al., 2024b)</ref>) can match or outperform TSFMs that are orders of magnitude larger. We also study and ablate myriad data augmentation and inference-time strategies to arrive at a simple recipe that works well in practice. With our recipe, we train a family of TSFMs (dubbed Reverso) from 0.2M to 2.6M parameters that significantly push the performance-efficiency frontier, as shown in Figure <ref type="figure" target="#fig_0">1</ref>.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="2.">Related Work</head><p>Time series foundation models. Our work is related to the existing research program around time series foundation models (TSFMs), which aim to train domain-general models for time series analysis and forecasting. TimeGPT <ref type="bibr" target="#b26">(Garza et al., 2023)</ref>, TimesFM <ref type="bibr" target="#b16">(Das et al., 2024)</ref>, and Lag-LLaMA <ref type="bibr" target="#b63">(Rasul et al., 2023)</ref> were some of the first works to show that decoder-only transformers can be utilized to train TSFMs with strong zero-shot forecasting performance. Timer <ref type="bibr" target="#b48">(Liu et al., 2024)</ref> and Timer-XL <ref type="bibr">(Liu et al., 2025b)</ref> scaled such generative pretraining with dataset size, model size and context length. Moirai <ref type="bibr" target="#b80">(Woo et al., 2024)</ref> incorporates a masked encoder to handle multivariate forecasting from various distributions. Chronos <ref type="bibr" target="#b2">(Ansari et al., 2024)</ref> fixes the vocabulary of time series patches, while Chronos-2 <ref type="bibr" target="#b3">(Ansari et al., 2025)</ref> introduced the group attention mechanism for multivariate forecasting. Xihe <ref type="bibr">(Sun et al., 2025)</ref> scales up TSFMs to over a billion parameters with a hierarchical block attention mechanism. PatchTST-FM-r1 <ref type="bibr" target="#b79">(Wen et al., 2026)</ref> showed that a generic patched transformer can also achieve competitive results.</p><p>A complementary line of work reuses large language models directly for time series by reprogramming or aligning them to TS tasks <ref type="bibr" target="#b88">(Zhou et al., 2023;</ref><ref type="bibr" target="#b38">Jin et al., 2023;</ref><ref type="bibr" target="#b11">Chang et al., 2025)</ref>. However, recent studies suggest that the LLM backbone often provides little benefit over simpler LLM-free baselines <ref type="bibr" target="#b72">(Tan et al., 2024)</ref>, motivating dedicated TSFMs such as those discussed above.</p><p>Transformer alternatives for time series modeling. While transformers have proven to be performant in the time series domain, there have also been works that employ modern "sequence-mixing" primitives-which have been shown to be effective in language modeling-for time series modeling. These works generally make use of linear attention layers <ref type="bibr" target="#b39">(Katharopoulos et al., 2020;</ref><ref type="bibr" target="#b59">Peng et al., 2021;</ref><ref type="bibr" target="#b64">Schlag et al., 2021;</ref><ref type="bibr">Yang et al., 2024a;</ref><ref type="bibr">b)</ref>, state-space models <ref type="bibr" target="#b32">(Gu et al., 2022;</ref><ref type="bibr" target="#b67">Smith et al., 2023;</ref><ref type="bibr">Gu &amp; Dao, 2024;</ref><ref type="bibr">Dao &amp; Gu, 2024)</ref>, or convolution layers <ref type="bibr">(Fu et al., 2023a;</ref><ref type="bibr">b;</ref><ref type="bibr" target="#b61">Poli et al., 2023;</ref><ref type="bibr" target="#b54">Massaroli et al., 2023)</ref>.</p><p>TSMamba <ref type="bibr" target="#b53">(Ma et al., 2024) and</ref><ref type="bibr">Mamba4Cast (Bhethanabhotla et al., 2024)</ref> show that Mamba layers can be effective for time series. TiRex <ref type="bibr" target="#b4">(Auer et al., 2025)</ref> utilizes the xLSTM <ref type="bibr" target="#b6">(Beck et al., 2024)</ref> architecture for zero-shot forecasting, while FlowState <ref type="bibr" target="#b30">(Graf et al., 2025)</ref> uses the S5 module <ref type="bibr" target="#b67">(Smith et al., 2023)</ref> and operates in the coefficient space of the transformed sequence. TempoPFN (Moroshan  <ref type="bibr">et al., 2025)</ref> and train on fully synthetic data. Convolution modules have been comparatively less popular in time series modeling. SCINet <ref type="bibr">(Liu et al., 2022a</ref>) introduces a downsample-convolve-interact framework for modeling complex time series. ModernTCN <ref type="bibr">(Luo &amp; Wang, 2024)</ref> makes use of grouped convolutions of varying kernel sizes across multiple dimensions while TVNet <ref type="bibr" target="#b41">(Li et al., 2025)</ref> utilizes reshaping techniques to operate on time series in three dimensions. There have also been works that show even simpler sequence mixing primitives such as linear/MLP layers work well in practice <ref type="bibr" target="#b18">(Ekambaram et al., 2023;</ref><ref type="bibr" target="#b76">Wang et al., 2024;</ref><ref type="bibr" target="#b57">Nochumsohn et al., 2025)</ref>.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="3.">Methods</head><p>Here we describe our recipe for learning efficient TSFMs, which includes the architecture ( §3.1), dataset ( §3.2), and inference strategy ( §3.3). We emphasize that the individual components in our recipe are not novel: the sequence mixing primitives we use (long convolutions and DeltaNet layers) are not new; similarly, our data augmentation, synthetic data generation, and inference strategies have been proposed before in the literature. The core contribution of this work is to show that these existing ingredients can be combined to produce a TSFM that significantly pushes the performanceefficiency frontier.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="3.1.">Architecture</head><p>We are given an input time series t ∈ R L of length L and must predict an output y ∈ R T of length T . Following standard practice <ref type="bibr" target="#b56">(Nie et al., 2023)</ref>, we train by predicting a patch of p points at a time (in parallel) through learning a function f θ : R L → R p parameterized with θ. During inference, we autoregressively predict chunks of p data points until we have forecasted T points. We use L = 2048, p = 48.</p><p>Our model architecture, shown in Figure <ref type="figure" target="#fig_1">2</ref>, is extremely simple and consists of stacked neural network blocks where each block consists of a sequence mixing module followed by an MLP channel mixing module. Finally, we have an output decoder based on attention that uses the contextualized representation of the input to predict p data points at once.</p><p>Embedding layer. The sequence t ∈ R L×1 is first normalized within the range [0, 1] with t ← t -min(t) max(t) -min(t) .</p><p>We found this [0, 1]-normalization to work better than zscore normalization which subtracts the mean and divides by the standard deviation. <ref type="foot" target="#foot_0">1</ref> In cases where there are missing values, these are imputed using linear interpolation. For sequences shorter than the model context length L, the remaining values are back-filled using the leftmost available data point.</p><p>The normalized sequence t is then up-projected pointwise using a single linear layer into d dimensions, yielding a transformed sequence x ∈ R L×d . Unlike existing works that make use of special time embeddings <ref type="bibr" target="#b55">(Moroshan et al., 2025;</ref><ref type="bibr" target="#b1">Alexandrov et al., 2019)</ref> to include seasonality and frequency features, utilizing metadata that might not be present at inference time, we adopt a minimalistic approach that can handle any time series as a simple numeric sequence.</p><p>Sequence mixing. We adopt a hybrid sequence mixing strategy wherein we switch between (gated) long convolution <ref type="bibr">(Fu et al., 2023b)</ref> and DeltaNet layers <ref type="bibr" target="#b64">(Schlag et al., 2021;</ref><ref type="bibr">Yang et al., 2024b)</ref>.</p><p>The long convolution layer uses depthwise separable convolutions <ref type="bibr" target="#b13">(Chollet, 2017)</ref>, where the number of groups is equal to d. This obtains the output z ∈ R L×d from an input sequence x ∈ R L×d given convolution kernel weight w ∈ R k×d via</p><formula xml:id="formula_0">z i,j = k-1 m=0 w m,j • x i-m,j</formula><p>where 0 ≤ i ≤ L -1 indexes the sequence position, and 0 ≤ j ≤ d-1 indexes the dimensions. The long convolution is an instance of the convolution kernel where k = L. This has demonstrated strong recall and reasoning performance while maintaining a sub-quadratic compute cost <ref type="bibr" target="#b61">(Poli et al., 2023)</ref>. We also make use of a gating layer, where the gate comes from a depthwise separable (short) convolution layer.</p><p>Taken together, our convolutional sequence mixing primitive is given by</p><formula xml:id="formula_1">x conv ← SiLU(short-conv(x) ⊙ long-conv(x)) x ← x + LayerNorm(x conv ).</formula><p>With FFT the overall complexity of the convolution layer is O(dL log L), enabling faster training than standard attention. While the FFT-based convolutions was previously not optimized for GPUs, recent works have enabled significant wallclock speed-ups <ref type="bibr">(Fu et al., 2023b)</ref>, which we make use of in practice.</p><p>We also make use of linear RNN layers every other layer.</p><p>The particular instance used in Reverso is DeltaNet <ref type="bibr" target="#b64">(Schlag et al., 2021)</ref>. DeltaNet learns the following state transition using query, key and value vectors</p><formula xml:id="formula_2">q i , k i , v i ∈ R d h (with head dimension d h ) S i = S i-1 (I -β i k i k T i ) + β i v i k T i x i ← x i + LayerNorm(S i q i )</formula><p>where the query, key, value vectors are obtained from linear projections followed by short convolutions of the input x, and β i ∈ (0, 1) is obtained by a linear projection of the input x i followed by a sigmoid. We use 4 heads (i.e., d h = d 4 ). To better model bidirectional context over the entire length L sequence, we add the last time step of the previous layer to the current layer's first hidden state (i.e., x</p><formula xml:id="formula_3">(l) 0 ← x (l) 0 + x (l-1)</formula><p>L-1 ) before the DeltaNet layer. We found this type of vector-based "state-weaving" strategy to work well in practice. Similar state-weaving strategies have been explored in <ref type="bibr" target="#b55">Moroshan et al. (2025)</ref>.</p><p>In our ablation studies we also compare against other DeltaNet variants such as Gated DeltaNet (GDN; <ref type="bibr" target="#b84">Yang et al., 2025)</ref> and Gated Delta Product (GDP; <ref type="bibr" target="#b66">Siems et al., 2025)</ref>, as well as linear attention variants such Gated Linear Attention (GLA; <ref type="bibr">Yang et al., 2024a)</ref> (which generalizes state-space models such as Mamba-2 <ref type="bibr">(Dao &amp; Gu, 2024)</ref>). Our findings show that DeltaNet performs well despite having fewer parameters.</p><p>Channel mixing. Each sequence mixing layer is followed by a channel mixing MLP layer. The MLP layer works as in the standard transformer architecture <ref type="bibr">(Vaswani et al., 2017)</ref>, with a dimension expansion factor of 4, with ReLU activations:</p><formula xml:id="formula_4">x mlp ← ReLU(xW up )W down x ←x + LayerNorm(x mlp )</formula><p>We found this simple MLP to work better than GLU-based alternatives <ref type="bibr" target="#b65">(Shazeer, 2020)</ref>.</p><p>Decoder head. The above blocks transform a sequence of inputs x (0) ∈ R L×d into x (n) ∈ R L×d after n layers. To obtain the final prediction, we first pass the final transformed input x (n) to obtain a set of decoder "query" vectors q dec :</p><formula xml:id="formula_5">z = W L x (n) , W L ∈ R p×L , z ∈ R p×d q dec = zW q , W q ∈ R d×d , q dec ∈ R p×d</formula><p>The decoder query vectors are then used to attend over the keys and values obtained from a transformation over x (n) ,</p><formula xml:id="formula_6">k dec = x (n) W k , W k ∈ R d×d , v dec = x (n) W v , W v ∈ R d×d , o = attention(q dec , k dec , v dec ), o ∈ R p×d .</formula><p>We find that smaller models train well without any positional embedding, whereas sin-cos positional embedding improves performance for Reverso-2.6M. Finally, we apply a linear layer to obtain the final output ŷ ∈ R p :</p><formula xml:id="formula_7">ŷ = z w o , w ∈ R d×1 .</formula><p>We found this type of attention-based decoder "head" to be more performant and parameter-efficient than a simple linear layer that directly predicts a p-sized vector from x (n) .</p><p>Training objective. Given the model prediction ŷ we unnormalized the output and train against the ground truth output y, using the mean absolute error (MAE) loss, where we masked out NaN values on the ground truth y during loss computation. For data augmention we apply a series of standard data augmentations: downsampling, amplitude modulation, vertical flip, horizontal flip, censor, mixup. For synthetic data generation, we generate data from Gaussian process with randomly selected kernels from a kernel bank, and combine this with spike/trapezoidal patterns as well as processes sampled with trend, seasonality and irregularity.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="3.2.">Dataset</head><p>Here we describe the pretraining dataset in addition to strategies for data augmentation and synthetic data generation.</p><p>Pretraining dataset. The time series community has developed a series of commonly-used datasets <ref type="bibr" target="#b28">(Godahewa et al., 2021;</ref><ref type="bibr" target="#b1">Alexandrov et al., 2019;</ref><ref type="bibr" target="#b0">Aksu et al., 2024;</ref><ref type="bibr" target="#b80">Woo et al., 2024)</ref>, consisting of data from various sources such as weather, traffic, and other domains. We train our models on the GiftEval <ref type="bibr" target="#b0">(Aksu et al., 2024)</ref> pretraining dataset, which has become the de facto standard for training TSFMs in recent years. The GiftEval pretraining dataset has around 4.5 million time series with 230 billion time points in total.</p><p>The dataset however is significantly imbalanced towards datasets such as Buildings900k <ref type="bibr" target="#b21">(Emami et al., 2024)</ref>, and Era5 <ref type="bibr" target="#b34">(Hersbach et al., 2020)</ref>.</p><p>To resolve this dataset imbalance, we precompute the strides on each dataset necessary to achieve a target (roughly uniform) fraction of time series sampled. For each dataset, we target a maximum of N max = 100000 samples per epoch, and recompute the strides such that we have at most N max samples from each dataset. Explicitly, for each dataset D with time series samples t ∈ D each of length l t , we compute the total sum of lengths as t∈D l t , and compute the stride for this dataset as s D = t∈D lt Nmax</p><p>. We also set an upper limit to 48 samples per time series t, to avoid oversampling short datasets. A random start point in each sequence t is chosen at each epoch to ensure sampling across the full pretraining set.</p><p>Data augmentation. Several techniques for data augmentation have been previously reported to help increase data diversity during pretraining TSFMs. We explored these augmentation techniques and found the following to be useful, which we eventually incorporated into our pretraining recipe: downsampling, amplitude modulation, flip along the x and y-axis (i.e., sign inversion and temporal reversal in <ref type="bibr" target="#b55">Moroshan et al. (2025)</ref>), censor augmentation and mixup <ref type="bibr" target="#b2">(Ansari et al., 2024)</ref>, applied in this order. See <ref type="bibr">Figure 3 (left)</ref>. Downsampling and amplitude modulation are applied at the level of the full sequence. Flip augmentations and censor augmentations are applied on each subsampled sequence of context length L and mixup is applied to the full batch. The full data augmentation pipeline is given in Algorithm 4 of the appendix.</p><p>Synthetic data. We use synthetic data similar to established baselines <ref type="bibr" target="#b4">(Auer et al., 2025;</ref><ref type="bibr" target="#b2">Ansari et al., 2024)</ref>, using methods such KernelSynth <ref type="bibr" target="#b2">(Ansari et al., 2024)</ref>, which use Gaussian processes to generate synthetic data. In particular, we define a kernel bank K (see Table <ref type="table">8</ref> of the appendix), and sample j ∼ U {1, 5} kernels from K and compose them using random binary additive or multiplicative operations. This forms a composite kernel κ. We also sample a mean µ which follows a linear trend with slope m ∼ U [-0.01, 0.01] and intercept c ∼ U [-1, 1] with probability 1/2 and con-stant otherwise. We then use κ and µ in a Gaussian process to sample the synthetic time series t syn . See Figure <ref type="figure" target="#fig_2">3</ref> (right).</p><p>We also include spike processes <ref type="bibr" target="#b4">(Auer et al., 2025;</ref><ref type="bibr" target="#b55">Moroshan et al., 2025;</ref><ref type="bibr" target="#b23">Feng et al., 2025)</ref> and TSI <ref type="bibr" target="#b5">(Bahrpeyma et al., 2021)</ref> as used in Chronos-2 to help in learning simple trends and periodic patterns, as further described in Algorithms 2 and 3 of the appendix. We generate a total of 1 million synthetic time series sequences with the above algorithm. The maximum sequence length is set to 4096.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="3.3.">Inference</head><p>We apply several techniques at inference time that help improve performance.</p><p>Flip equivariance. Following prior works <ref type="bibr" target="#b16">(Das et al., 2024)</ref>, we found it helpful to ensure flip equivariance by passing both the original and flipped context to the model, and then averaging the results:</p><formula xml:id="formula_8">ŷ = f (x) -f (-x) 2</formula><p>While this requires two forward passes of the model, we observe that this reduces forecasting error consistently across multiple benchmarks.</p><p>Downsampling. Given a pretrained TSFM with fixed context length L, we generally want to ensure that patterns we wish to capture in the time series have seasonality period S &lt; L. The case of S &gt; L potentially results in insufficient information for an effective forecast. Works such as Flowstate <ref type="bibr" target="#b30">(Graf et al., 2025)</ref> determine this downsampling factor by rescaling the series with a ratio between the seasonality of the data and a base seasonality of the model. However, such an approach relies heavily on the metadata of the input that might not be available at inference time, and requires the handling of several edge cases where multiple frequency scales are present.</p><p>We instead use a simple algorithm to determine the downsampling factors using FFT as described below. We first compute the Fast Fourier Transform (FFT) of the input sequence t ∈ R L to obtain the amplitude spectrum A(f ). We then identify the peaks in the spectrum. To distinguish the dominant peak from noise, we enforce a set of criteria, as described in Algorithm 5 and Appendix D.</p><p>Sequences t where the seasonality exceeds the context length L of Reverso are downsampled by a factor of k to t ′ which is passed as input to the model. Given an original forecast horizon L, the model now predicts ⌈L/k⌉ timesteps, which are then upsampled to L by linear interpolation. An intuitive illustration is shown in Figure <ref type="figure">7</ref> of the appendix. with maximum learning rate 5 × 10 -4 using a WSD scheduler <ref type="bibr" target="#b78">(Wen et al., 2025)</ref>, β 1 = 0.9, β 2 = 0.999, ϵ = 1×10 -8 and weight decay of 0.1 and we roughly sample 1 million time points per training step with a batch size of 512. Our models take {10, 20, 40} H100-hours for a full training run.</p><p>Baselines. Our baselines include state-of-the-art TSFMs across varying architectures and sizes: Chronos and Chronos-2 <ref type="bibr" target="#b2">(Ansari et al., 2024;</ref><ref type="bibr" target="#b90">2025)</ref>, TimesFM-2 and TimesFM-2.5 <ref type="bibr" target="#b16">(Das et al., 2024)</ref>, PatchTST-FM-r1 <ref type="bibr" target="#b79">(Wen et al., 2026)</ref>, TiRex <ref type="bibr" target="#b4">(Auer et al., 2025)</ref>, FlowState <ref type="bibr" target="#b30">(Graf et al., 2025)</ref>, Xihe <ref type="bibr">(Sun et al., 2025)</ref>, Kairos <ref type="bibr" target="#b23">(Feng et al., 2025)</ref>, Moirai and Moirai-2 <ref type="bibr" target="#b80">(Woo et al., 2024;</ref><ref type="bibr">Liu et al., 2025a)</ref>, Sundial <ref type="bibr">(Liu et al., 2025c)</ref>, Toto <ref type="bibr" target="#b14">(Cohen et al., 2025)</ref>, YingLong <ref type="bibr" target="#b77">(Wang et al., 2025)</ref> and Tiny-time Mixers <ref type="bibr" target="#b19">(Ekambaram et al., 2024)</ref>. The sizes of these baseline models are given in Figure <ref type="figure" target="#fig_0">1</ref> and Figure <ref type="figure" target="#fig_3">4</ref>.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="4.2.">Main Results: Zero-Shot Forecasting Performance</head><p>Gift-Eval. The Gift-Eval benchmark <ref type="bibr" target="#b0">(Aksu et al., 2024)</ref> contains 23 different datasets with 97 different forecasting tasks. We train with the provided Gift-Eval Pretrain dataset.<ref type="foot" target="#foot_1">2</ref> On this benchmark, Reverso achieves a competitive MASE value of 0.711 at a modest model size of 2.6M parameters. In particular, we outperform similarly small TSFMs such as Super-Linear (2.5M), FlowState (2.6M) and Tiny-Time Mixers (1M). <ref type="foot" target="#foot_2">3</ref> Reverso-Small, at just 550K parameters, outperforms all the above models with an MASE of 0.726. Table <ref type="table" target="#tab_7">9</ref> of the appendix gives the full numeric results broken down by dataset/domain, while Figure <ref type="figure" target="#fig_6">6</ref> shows some qualitative results on various datasets. We visualize the results for the full benchmark for all models in Figure <ref type="figure" target="#fig_0">1</ref> (see Table <ref type="table" target="#tab_0">10</ref> of the appendix for the full table of baselines and their results). We also observe that our model does particularly well in long sequence forecasting. Table <ref type="table" target="#tab_1">2</ref> shows the performance of the top TSFMs on each of the short/medium/long horizon splits within Gift-Eval, where we see that Reverso achieves strong medium and long horizon point forecasting results, despite being the smallest family of models evaluated on this benchmark.</p><p>LTSF/TSLib. We next explore zero-shot transfer results to the LTSF <ref type="bibr" target="#b85">(Zeng et al., 2023)</ref> test set. On this dataset we outperform Sundial <ref type="bibr">(Liu et al., 2025c)</ref>, Super-Linear <ref type="bibr" target="#b57">(Nochumsohn et al., 2025)</ref>, Timer-XL <ref type="bibr">(Liu et al., 2025b)</ref> and several other models at a much smaller parameter count, as shown in Figure <ref type="figure" target="#fig_3">4</ref>. We report more granular performance numbers in Table <ref type="table" target="#tab_2">3</ref>, where we follow Sundial <ref type="bibr">(Liu et al., 2025c)</ref> and report the mean MAE achieved across various prediction horizons for the datasets of ETTh1, ETTh2, ETTm1, ETTm2, Electricity and Weather.</p><p>These results are especially strong given that some of the baselines are quite advantaged compared to Reverso. For example, in-domain datasets such as Electricity enter into the pretraining datasets of TiRex and Chronos-2. Moreover, for models which do not report results on the full benchmark, we impute their scores with the best existing model on each missing dataset. <ref type="foot" target="#foot_3">4</ref> Despite the advantage given to all other models, we observe that Reverso is still the one of the best performing class of models on LTSF.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="4.3.">Ablations</head><p>We perform ablations across various architectural, dataset, and inference-strategy choices.</p><p>Architecture. How much does our hybrid sequence mixing layers help for time series? In Table <ref type="table" target="#tab_3">4</ref>, we report the MASE achieved by different instances of our model using We find that for non-hybrid models, DeltaNet <ref type="bibr" target="#b64">(Schlag et al., 2021)</ref> and Gated DeltaNet <ref type="bibr" target="#b84">(Yang et al., 2025)</ref> achieves the low loss with few parameter counts compared to layers like Gated Linear Attention <ref type="bibr">(Yang et al., 2024a)</ref> and DeltaProduct <ref type="bibr" target="#b66">(Siems et al., 2025)</ref>. Overall, linear attention and convolution methods consistently outperform full attention. Hybrid models that combine long convolutions with linear RNN layers ultimately perform best.</p><p>Table <ref type="table" target="#tab_4">5</ref> shows ablation studies on our attention decoder head, where we replace the attention mechanism with a simple (bi)linear layer. For the simple linear layer, the hidden states x (n) ∈ R L×d after the last Reverso block are projected to the output with two linear projections W 1 ∈ R d×1 and W 2 ∈ R p×L with the following transformation</p><formula xml:id="formula_9">ŷ = W 2 x (L) W 1 .</formula><p>We observe that the attention mechanism at the decoder boosts overall performance, in particular helps to capture long range dependencies.</p><p>Data augmentation and synthetic data. Data augmentation strategies and synthetic data generation processes have been shown to improve data diversity.</p><p>Table <ref type="table" target="#tab_5">6</ref> shows a leave-one-out experiment, where we train Reverso (again on a smaller training set) while removing each one of the data augmentations within the pipeline {mixup, downsample, temporal reversal(flip-x), vertical flip(flip-y), censor, amplitude modulation}. We find that our training recipe is robust to the setting of individual data augmentation techniques, where removing a single data augmentation does not significantly hurt pre-training. But at the same time, the usage of augmentations remain necessary, and ablating them altogether is detrimental. Synthetic data also shows significant benefit, even when present in small ratios. This finding corroborates recent works <ref type="bibr" target="#b3">(Ansari et al., 2025;</ref><ref type="bibr" target="#b55">Moroshan et al., 2025)</ref> which also highlight the importance of data augmentations and synthetic data in training TSFMs.</p><p>Inference. Finally, we analyze the different effects of downsampling and flip invariance methods described in Section 3.3 in forecasting. We find that downsampling helps Flip invariance helps more on short sequences. We compare two methods of doing this autoregressive rollout: flip-once where the original and flipped predictions across the whole forecast horizon are obtained separately and averaged once at the end after the autoregressive rollout is completed, versus flip-every where the original and flipped predictions are averaged at the end of each intermediate autoregressive step. The latter method shows slightly more marginal improvements than the former.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="5.">Discussion</head><p>As stated in §3, Reverso is built from established architectural components; our main contribution lies in how we combine them. We show that recent hybrid models that have been successful in language modeling can result in simple TSFMs that yield a strong performance-efficiency trade-off.</p><p>More generally, we view Reverso as an optimized recipe for TSFMs. Similar patterns have appeared in foundation models in other domains: RoBERTa <ref type="bibr" target="#b47">(Liu et al., 2019)</ref> systematically refines the original BERT recipe <ref type="bibr" target="#b17">(Devlin et al., 2019)</ref>, while DINOv2 <ref type="bibr" target="#b58">(Oquab et al., 2023)</ref> streamlines the original DINO formulation. Likewise, many influential works in foundation modeling arise from scaling up existing designs (e.g., GPT-2 to GPT-3), rather than introducing entirely new building blocks. Our results show that, in the TSFM setting, carefully designed architectures allow us instead to scale down existing recipes while maintaining competitive performance, effectively pushing the Pareto frontier towards smaller and cheaper models. Our findings also resonate with recent work on hybrid LLM architectures <ref type="bibr" target="#b43">(Lieber et al., 2024;</ref><ref type="bibr" target="#b27">Glorioso et al., 2024;</ref><ref type="bibr" target="#b75">Waleffe et al., 2024)</ref>, which demonstrates that mixing established primitives can outperform either component alone.</p><p>Reverso still has several limitations. First, Reverso is trained primarily as a univariate forecasting model. Chronos-2 has shown that attention can be cleverly utilized to learn crosschannel dependence in multivariate time series. Future work could investigate the potentials of the various sequence mixing layers in multivariate domains. Second, while Reverso's performance on long sequence was near state-of-the-art, its performance on shorter sequences still lagged behind larger TSFMs. Finally, we focus primarily on point prediction, although some applications of interest would benefit from distributional predictions; insofar as conformal methods <ref type="bibr">(Stankeviciute et al., 2021;</ref><ref type="bibr">Sun &amp; Yu, 2025)</ref> have also been adopted as a lightweight adaptation to obtain uncertainty bounds for any point time series forecasts, we anticipate such techniques being applicable to obtain uncertainty estimates from Reverso models.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="6.">Conclusion</head><p>This paper presents Reverso, a family of models that significantly push the efficiency-performance frontier of TSFMs.</p><p>We show that large-scale models are not necessary, and that simple architectures based on convolutions and linear RNN layers can achieve competitive zero-shot forecasting performance. Reverso demonstrates strong capability as a highly accurate model for long sequence, long horizon forecasting.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>Impact Statement</head><p>This paper presents work whose goal is to advance the field of Machine Learning. There are many potential societal consequences of our work, none of which we feel must be specifically highlighted here.</p><p>Table <ref type="table">8</ref>. Kernel Bank K used for Synthetic Data Generation Kernel Formula κ(x, x ′ ) Hyperparameters</p><formula xml:id="formula_10">Constant C C = 1 Linear σ 2 + x • x ′ σ ∈ {0, 1, 10} RBF exp -∥x-x ′ ∥ 2 2l 2 l ∈ {0.1, 1, 10} Rational Quadratic 1 + ∥x-x ′ ∥ 2 2α -α α ∈ {0.1, 1, 10} Matérn 2 1-ν Γ(ν) √ 2ν ∥x-x ′ ∥ l ν K ν √ 2ν ∥x-x ′ ∥ l ν ∈ {0.5, 1.5, 2.5}, l ∈ {0.1, 1, 10} Periodic exp -2 sin 2 (π∥x -x ′ ∥/p) p ∈ P</formula><p>Algorithm 2 Spike Process Generation, adapted from Kairos <ref type="bibr" target="#b23">(Feng et al., 2025)</ref> Require x i:i+len ← x i:i+len + s • e 1:len 14: end for 15: Add white noise: x ← x + ϵ, where ϵ ∼ N (0, σ 2 ϵ ) 16: return x 2. Amplitude Modulation: We multiply t by a piecewise linear function. We follow the implementation from TiRex but sample just a single intermediate changepoint.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="3.">Flips:</head><p>We apply random sign flips (inverting the y-axis) and temporal reversals (flipping the x-axis). This follows the implementation of TempoPFN <ref type="bibr" target="#b55">(Moroshan et al., 2025)</ref>.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="4.">Censoring:</head><p>The series is clipped from both the top and the bottom. This effectively applies a per-sample thresholding which reduces the effect of anomalies on training.</p><p>5. Batch Mixup: We apply Mixup <ref type="bibr" target="#b2">(Ansari et al., 2024)</ref> at the batch level, creating a convex interpolation between samples.</p><p>The formal procedure for generating a single training batch is detailed in Algorithm 4.    </p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>B. Extended results on Gift-Eval</head></div><figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_0"><head>Figure 1 .</head><label>1</label><figDesc>Figure1. Zero-shot performance on the full Gift-Eval test set<ref type="bibr" target="#b0">(Aksu et al., 2024)</ref>. Reverso sets a new performance-efficiency Pareto frontier compared to existing time series foundation models.</figDesc><graphic coords="2,128.34,67.06,340.21,224.22" type="bitmap" /></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_1"><head>Figure 2 .</head><label>2</label><figDesc>Figure 2. Reverso architecture. An input sequence t ∈ R L of length L is first passed through a single projection layer to obtain embedding representations x ∈ R L×d . Then, n layers of sequence-mixing and channel-mixing blocks operates on x, where we alternate between long convolutions and DeltaNet for sequence mixing across length L, and use MLP layers for channel mixing across dimension d. The final output head (based on an attention-based transformation) obtains the predictions ŷ ∈ R p .</figDesc><graphic coords="3,114.95,67.06,364.49,205.64" type="bitmap" /></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_2"><head>Figure 3 .</head><label>3</label><figDesc>Figure 3. Our data augmentation (left) and synthetic data generation (right) pipeline.For data augmention we apply a series of standard data augmentations: downsampling, amplitude modulation, vertical flip, horizontal flip, censor, mixup. For synthetic data generation, we generate data from Gaussian process with randomly selected kernels from a kernel bank, and combine this with spike/trapezoidal patterns as well as processes sampled with trend, seasonality and irregularity.</figDesc><graphic coords="5,91.89,67.06,413.09,232.36" type="bitmap" /></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_3"><head>Figure 4 .</head><label>4</label><figDesc>Figure 4. LTSF performance vs. Parameter Count. MAE is averaged over the horizons of {96, 192, 336, 720} for the datasets ETTh1, ETTh2, ETTm1, ETTm2, Electricity and Weather. For models which are not evaluated on all the datasets (e.g. YingLong did not report results for Electricity), we impute with the other best existing model on that dataset.</figDesc><graphic coords="7,307.44,67.06,234.00,154.42" type="bitmap" /></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_4"><head>:</head><label></label><figDesc>Length L, Pattern types T = {"inverted u", "spikes"}, Ranges for baseline [b min , b max ], period [p min , p max ], amplitude [a min , a max ], width [w min , w max ], and noise [σ min , σ max ]. 1: Sample parameters: 2: type ∼ Uniform(T ), b ∼ Uniform(b min , b max ), p ∼ Uniform{p min , p max } 3: a ∼ Uniform(a min , a max ), w ∼ Uniform{w min , w max }, σ ϵ ∼ Uniform(σ min , σ max ) 4: Construct trapezoid shape e of length w: 5: Define u = ⌊w/4⌋, f = ⌊w/2⌋, d = w -u -f 6: e up = linspace(0, a, u), e f lat = constant(a, f ), e down = linspace(a, 0, d) 7: e = [e up ; e f lat ; e down ] 8: Initialize series: x t = b for t = 1, . . . , L 9: s = -1 if type = "inverted u" else 1 10: Add periodic patterns: 11: for i = 0, p, 2p, • • • &lt; L do 12: len = min(w, L -i) 13:</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_5"><head>Figure 5 .</head><label>5</label><figDesc>Figure 5. Zero-shot performance on the Gift-Eval benchmark for (a) long sequences (average length at least 2048) and (b) short sequences.</figDesc><graphic coords="18,308.16,90.64,233.26,153.74" type="bitmap" /></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_6"><head>Figure 6 .</head><label>6</label><figDesc>Figure 6. Qualitative results visualizing zero-shot forecasts by Reverso on various tasks within Gift-Eval. Reverso is able to perform long horizon forecasting, accurately capturing patterns at multiple frequency scales. The grey vertical dotted line denotes the length of a single autoregressive prediction.</figDesc><graphic coords="21,55.44,498.20,233.27,93.31" type="bitmap" /></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0"><head></head><label></label><figDesc></figDesc><graphic coords="24,128.34,302.32,340.21,176.29" type="bitmap" /></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" type="table" xml:id="tab_0"><head>Table 1 .</head><label>1</label><figDesc>Architecture configurations for Reverso models of different sizes.</figDesc><table><row><cell>Model</cell><cell cols="3">Parameters Layers Dim (d)</cell></row><row><cell>Reverso-Nano</cell><cell>200K</cell><cell>2</cell><cell>32</cell></row><row><cell>Reverso-Small</cell><cell>550K</cell><cell>4</cell><cell>64</cell></row><row><cell>Reverso</cell><cell>2.6M</cell><cell>8</cell><cell>128</cell></row><row><cell cols="2">4. Empirical Study</cell><cell></cell><cell></cell></row><row><cell cols="2">4.1. Experimental Setup</cell><cell></cell><cell></cell></row><row><cell cols="4">We pretrain three versions of Reverso with 200K, 550K</cell></row><row><cell cols="4">and 2.6M parameters. See Table 1 for the model configura-</cell></row><row><cell cols="4">tions. We train with AdamW (Loshchilov &amp; Hutter, 2019)</cell></row></table></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" type="table" xml:id="tab_1"><head>Table 2 .</head><label>2</label><figDesc>Model MASE scores across forecast horizons, averaged across the 21 datasets in Gift-Eval with all three horizons available. Our Reverso models demonstrate strong long horizon forecasting abilities, despite the multiple autoregressive rollouts using our prediction length of 48 as compared to models like Xihe-Max with maximum prediction length of 720.</figDesc><table><row><cell></cell><cell></cell><cell></cell><cell>MASE</cell><cell></cell></row><row><cell>Model</cell><cell cols="4">Params Short Medium Long</cell></row><row><cell>Xihe-Max</cell><cell>1.5B</cell><cell>0.623</cell><cell>0.718</cell><cell>0.763</cell></row><row><cell>TimesFM-2.5</cell><cell>200M</cell><cell>0.626</cell><cell>0.724</cell><cell>0.751</cell></row><row><cell>PatchTST-FM</cell><cell>260M</cell><cell>0.616</cell><cell>0.722</cell><cell>0.745</cell></row><row><cell>TiRex</cell><cell>30M</cell><cell>0.638</cell><cell>0.750</cell><cell>0.767</cell></row><row><cell>Reverso</cell><cell>2.6M</cell><cell>0.633</cell><cell>0.705</cell><cell>0.749</cell></row><row><cell cols="2">Reverso-Small 550K</cell><cell>0.648</cell><cell>0.728</cell><cell>0.754</cell></row></table></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" type="table" xml:id="tab_2"><head>Table 3 .</head><label>3</label><figDesc>Zero-shot forecasting performance (MAE) on LTSF datasets: ETTm1, ETTm2, ETTh1, ETTh2, Electricity and Weather, comparing between Reverso variants against state-of-the-art foundation models. Results represent the averaged MAE across prediction lengths {96, 192, 336, 720}. Best results are in bold, and second-best are underlined. A full set of results are shown in Table12</figDesc><table><row><cell>Model</cell><cell cols="8">Reverso Reverso-Small Reverso-Nano Sundial-L Super-Linear Timer-XL TiRex Chronos-2</cell></row><row><cell>Params</cell><cell>2.6M</cell><cell>550K</cell><cell>200K</cell><cell>444M</cell><cell>2.6M</cell><cell>85M</cell><cell>30M</cell><cell>120M</cell></row><row><cell>ETTm1</cell><cell>0.367</cell><cell>0.376</cell><cell>0.382</cell><cell>0.369</cell><cell>0.389</cell><cell>0.392</cell><cell>0.365</cell><cell>0.359</cell></row><row><cell>ETTm2</cell><cell>0.304</cell><cell>0.309</cell><cell>0.311</cell><cell>0.315</cell><cell>0.325</cell><cell>0.336</cell><cell>0.302</cell><cell>0.291</cell></row><row><cell>ETTh1</cell><cell>0.404</cell><cell>0.404</cell><cell>0.416</cell><cell>0.420</cell><cell>0.416</cell><cell>0.417</cell><cell>0.417</cell><cell>0.405</cell></row><row><cell>ETTh2</cell><cell>0.365</cell><cell>0.370</cell><cell>0.384</cell><cell>0.387</cell><cell>0.386</cell><cell>0.388</cell><cell>0.362</cell><cell>0.367</cell></row><row><cell>Electricity</cell><cell>0.238</cell><cell>0.241</cell><cell>0.249</cell><cell>0.262</cell><cell>0.267</cell><cell>0.268</cell><cell>0.240</cell><cell>0.237</cell></row><row><cell>Weather</cell><cell>0.253</cell><cell>0.252</cell><cell>0.257</cell><cell>0.275</cell><cell>0.275</cell><cell>0.294</cell><cell>0.247</cell><cell>0.245</cell></row><row><cell>Avg</cell><cell>0.322</cell><cell>0.325</cell><cell>0.333</cell><cell>0.338</cell><cell>0.343</cell><cell>0.349</cell><cell>0.322</cell><cell>0.317</cell></row><row><cell>Avg Rank</cell><cell>2.50</cell><cell>3.83</cell><cell>5.17</cell><cell>6.33</cell><cell>6.17</cell><cell>7.83</cell><cell>2.83</cell><cell>1.67</cell></row></table></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" type="table" xml:id="tab_3"><head>Table 4 .</head><label>4</label><figDesc>Sequence mixing layer ablations for Reverso, at the same 8 layer 128 dimension setting. Results are shown for Gift-Eval.</figDesc><table><row><cell>Sequence Module</cell><cell>Params</cell><cell>Long MASE</cell><cell>Short MASE</cell><cell>Overall MASE</cell></row><row><cell>DeltaNet</cell><cell>2.0M</cell><cell>0.706</cell><cell>0.792</cell><cell>0.732</cell></row><row><cell>Gated DeltaProduct</cell><cell>3.0M</cell><cell>0.711</cell><cell>0.793</cell><cell>0.735</cell></row><row><cell>Gated DeltaNet</cell><cell>2.6M</cell><cell>0.708</cell><cell>0.782</cell><cell>0.730</cell></row><row><cell>Long Convolution</cell><cell>3.1M</cell><cell>0.708</cell><cell>0.799</cell><cell>0.735</cell></row><row><cell>Gated Linear Attention</cell><cell>2.1M</cell><cell>0.726</cell><cell>0.817</cell><cell>0.753</cell></row><row><cell>Attention (sin-cos)</cell><cell>2.0M</cell><cell>0.729</cell><cell>0.840</cell><cell>0.762</cell></row><row><cell>Attention (RoPE)</cell><cell>2.0M</cell><cell>0.719</cell><cell>0.824</cell><cell>0.750</cell></row><row><cell>Conv + Gated DeltaNet</cell><cell>3.1M</cell><cell>0.704</cell><cell>0.784</cell><cell>0.728</cell></row><row><cell>Conv + DeltaNet (Reverso)</cell><cell>2.6M</cell><cell>0.700</cell><cell>0.786</cell><cell>0.725</cell></row></table></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" type="table" xml:id="tab_4"><head>Table 5 .</head><label>5</label><figDesc>Decoder head ablations, using different sizes of Reverso. We compare the use of attention mechanism within the decoder head against a simple bilinear output layer.</figDesc><table><row><cell>Decoder Architecture</cell><cell>Reverso Layers</cell><cell>Dimension</cell><cell>Long MASE</cell><cell>Short MASE</cell><cell>Overall MASE</cell></row><row><cell>Linear</cell><cell>4</cell><cell>64</cell><cell>0.751</cell><cell>0.830</cell><cell>0.774</cell></row><row><cell>Attention</cell><cell>4</cell><cell>64</cell><cell>0.728</cell><cell>0.811</cell><cell>0.753</cell></row><row><cell>Linear</cell><cell>8</cell><cell>128</cell><cell>0.719</cell><cell>0.789</cell><cell>0.740</cell></row><row><cell>Attention</cell><cell>8</cell><cell>128</cell><cell>0.700</cell><cell>0.786</cell><cell>0.725</cell></row></table></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" type="table" xml:id="tab_5"><head>Table 6 .</head><label>6</label><figDesc>Ablations on dataset augmentation and synthetic data.</figDesc><table><row><cell>Method</cell><cell>MASE</cell></row><row><cell>Baseline</cell><cell>0.738</cell></row><row><cell>w/o mixup</cell><cell>0.740</cell></row><row><cell>w/o downsample</cell><cell>0.740</cell></row><row><cell>w/o temp rev</cell><cell>0.740</cell></row><row><cell>w/o flip</cell><cell>0.739</cell></row><row><cell>w/o censor</cell><cell>0.738</cell></row><row><cell>w/o amp mod</cell><cell>0.737</cell></row><row><cell>w/o any data augmentation</cell><cell>0.755</cell></row><row><cell>w/o synthetic data</cell><cell>0.786</cell></row></table></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" type="table" xml:id="tab_6"><head>Table 7 .</head><label>7</label><figDesc>Ablations on inference strategy on Gift-Eval.</figDesc><table><row><cell>Method</cell><cell>Short Seq</cell><cell>Long Seq</cell><cell>Short Term</cell><cell>Med Term</cell><cell>Long Term</cell><cell>Overall</cell></row><row><cell>Baseline</cell><cell cols="5">0.781 0.697 0.710 0.730 0.746</cell><cell>0.722</cell></row><row><cell cols="6">w/o downsampling 0.781 0.717 0.710 0.755 0.789</cell><cell>0.736</cell></row><row><cell>No flip</cell><cell cols="5">0.788 0.700 0.715 0.730 0.748</cell><cell>0.726</cell></row><row><cell>Flip once</cell><cell cols="5">0.781 0.698 0.710 0.730 0.747</cell><cell>0.722</cell></row><row><cell>Flip every</cell><cell cols="5">0.781 0.697 0.710 0.730 0.746</cell><cell>0.722</cell></row><row><cell cols="7">bring long range dependencies into the context window of</cell></row><row><cell cols="7">our model, improving the medium and long term forecast</cell></row><row><cell>performance.</cell><cell></cell><cell></cell><cell></cell><cell></cell><cell></cell><cell></cell></row></table></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" type="table" xml:id="tab_7"><head>Table 9 .</head><label>9</label><figDesc>Full results on Gift-Eval achieved by Reverso, with an overall MASE of 0.711.</figDesc><table><row><cell>Dataset</cell><cell>Domain</cell><cell>Var MASE</cell><cell>Dataset</cell><cell>Domain</cell><cell cols="2">Var MASE</cell></row><row><cell>loop seattle/5T/short</cell><cell>Transport</cell><cell>1 0.5531</cell><cell>ett1/H/short</cell><cell>Energy</cell><cell>7</cell><cell>0.8112</cell></row><row><cell>loop seattle/5T/medium</cell><cell>Transport</cell><cell>1 0.8008</cell><cell>ett1/H/medium</cell><cell>Energy</cell><cell>7</cell><cell>1.2476</cell></row><row><cell>loop seattle/5T/long</cell><cell>Transport</cell><cell>1 0.8880</cell><cell>ett1/H/long</cell><cell>Energy</cell><cell>7</cell><cell>1.3336</cell></row><row><cell>loop seattle/D/short</cell><cell>Transport</cell><cell>1 0.8818</cell><cell>ett1/W/short</cell><cell>Energy</cell><cell>7</cell><cell>1.4936</cell></row><row><cell>loop seattle/H/short</cell><cell>Transport</cell><cell>1 0.8113</cell><cell>ett2/15T/short</cell><cell>Energy</cell><cell>7</cell><cell>0.7479</cell></row><row><cell>loop seattle/H/medium</cell><cell>Transport</cell><cell>1 0.9009</cell><cell>ett2/15T/medium</cell><cell>Energy</cell><cell>7</cell><cell>0.8903</cell></row><row><cell>loop seattle/H/long</cell><cell>Transport</cell><cell>1 0.8668</cell><cell>ett2/15T/long</cell><cell>Energy</cell><cell>7</cell><cell>0.9261</cell></row><row><cell>m dense/D/short</cell><cell>Transport</cell><cell>1 0.7038</cell><cell>ett2/D/short</cell><cell>Energy</cell><cell>7</cell><cell>1.3449</cell></row><row><cell>m dense/H/short</cell><cell>Transport</cell><cell>1 0.8146</cell><cell>ett2/H/short</cell><cell>Energy</cell><cell>7</cell><cell>0.7140</cell></row><row><cell>m dense/H/medium</cell><cell>Transport</cell><cell>1 0.6703</cell><cell>ett2/H/medium</cell><cell>Energy</cell><cell>7</cell><cell>0.9900</cell></row><row><cell>m dense/H/long</cell><cell>Transport</cell><cell>1 0.6777</cell><cell>ett2/H/long</cell><cell>Energy</cell><cell>7</cell><cell>0.9873</cell></row><row><cell>sz taxi/15T/short</cell><cell>Transport</cell><cell>1 0.5441</cell><cell>ett2/W/short</cell><cell>Energy</cell><cell>7</cell><cell>0.7538</cell></row><row><cell>sz taxi/15T/medium</cell><cell>Transport</cell><cell>1 0.5420</cell><cell>hierarchical sales/D/short</cell><cell>Sales</cell><cell>1</cell><cell>0.7456</cell></row><row><cell>sz taxi/15T/long</cell><cell>Transport</cell><cell>1 0.5148</cell><cell cols="2">hierarchical sales/W/short Sales</cell><cell>1</cell><cell>0.7469</cell></row><row><cell>sz taxi/H/short</cell><cell>Transport</cell><cell>1 0.5698</cell><cell>hospital/M/short</cell><cell cols="2">Healthcare 1</cell><cell>0.7863</cell></row><row><cell>bitbrains fast storage/5T/short</cell><cell>Web/CloudOps</cell><cell>2 0.6703</cell><cell>jena weather/10T/short</cell><cell>Nature</cell><cell>21</cell><cell>0.2907</cell></row><row><cell cols="2">bitbrains fast storage/5T/medium Web/CloudOps</cell><cell>2 0.9883</cell><cell cols="2">jena weather/10T/medium Nature</cell><cell>21</cell><cell>0.6179</cell></row><row><cell>bitbrains fast storage/5T/long</cell><cell>Web/CloudOps</cell><cell>2 0.8828</cell><cell>jena weather/10T/long</cell><cell>Nature</cell><cell>21</cell><cell>0.6427</cell></row><row><cell>bitbrains fast storage/H/short</cell><cell>Web/CloudOps</cell><cell>2 1.0029</cell><cell>jena weather/D/short</cell><cell>Nature</cell><cell>21</cell><cell>1.3003</cell></row><row><cell>bitbrains rnd/5T/short</cell><cell>Web/CloudOps</cell><cell>2 1.6286</cell><cell>jena weather/H/short</cell><cell>Nature</cell><cell>21</cell><cell>0.5126</cell></row><row><cell>bitbrains rnd/5T/medium</cell><cell>Web/CloudOps</cell><cell>2 4.3766</cell><cell>jena weather/H/medium</cell><cell>Nature</cell><cell>21</cell><cell>0.7812</cell></row><row><cell>bitbrains rnd/5T/long</cell><cell>Web/CloudOps</cell><cell>2 3.3422</cell><cell>jena weather/H/long</cell><cell>Nature</cell><cell>21</cell><cell>1.0075</cell></row><row><cell>bitbrains rnd/H/short</cell><cell>Web/CloudOps</cell><cell>2 5.8132</cell><cell>kdd cup 2018/D/short</cell><cell>Nature</cell><cell>1</cell><cell>1.2126</cell></row><row><cell>bizitobs application/10S/short</cell><cell>Web/CloudOps</cell><cell>2 1.0614</cell><cell>kdd cup 2018/H/short</cell><cell>Nature</cell><cell>1</cell><cell>0.9513</cell></row><row><cell cols="2">bizitobs application/10S/medium Web/CloudOps</cell><cell>2 1.5193</cell><cell>kdd cup 2018/H/medium</cell><cell>Nature</cell><cell>1</cell><cell>1.0454</cell></row><row><cell>bizitobs application/10S/long</cell><cell>Web/CloudOps</cell><cell>2 3.2373</cell><cell>kdd cup 2018/H/long</cell><cell>Nature</cell><cell>1</cell><cell>1.0415</cell></row><row><cell>bizitobs l2c/5T/short</cell><cell>Web/CloudOps</cell><cell>7 0.2825</cell><cell>m4 daily/D/short</cell><cell>Econ/Fin</cell><cell>1</cell><cell>3.3280</cell></row><row><cell>bizitobs l2c/5T/medium</cell><cell>Web/CloudOps</cell><cell>7 0.4683</cell><cell>m4 hourly/H/short</cell><cell>Econ/Fin</cell><cell>1</cell><cell>0.7820</cell></row><row><cell>bizitobs l2c/5T/long</cell><cell>Web/CloudOps</cell><cell>7 0.4891</cell><cell>m4 monthly/M/short</cell><cell>Econ/Fin</cell><cell>1</cell><cell>0.9472</cell></row><row><cell>bizitobs l2c/H/short</cell><cell>Web/CloudOps</cell><cell>7 0.4383</cell><cell>m4 quarterly/Q/short</cell><cell>Econ/Fin</cell><cell>1</cell><cell>1.2159</cell></row><row><cell>bizitobs l2c/H/medium</cell><cell>Web/CloudOps</cell><cell>7 0.4881</cell><cell>m4 weekly/W/short</cell><cell>Econ/Fin</cell><cell>1</cell><cell>2.0522</cell></row><row><cell>bizitobs l2c/H/long</cell><cell>Web/CloudOps</cell><cell>7 0.5473</cell><cell>m4 yearly/A/short</cell><cell>Econ/Fin</cell><cell>1</cell><cell>3.4251</cell></row><row><cell>bizitobs service/10S/short</cell><cell>Web/CloudOps</cell><cell>2 0.7725</cell><cell>restaurant/D/short</cell><cell>Sales</cell><cell>1</cell><cell>0.6936</cell></row><row><cell>bizitobs service/10S/medium</cell><cell>Web/CloudOps</cell><cell>2 0.9605</cell><cell>saugeen/D/short</cell><cell>Nature</cell><cell>1</cell><cell>2.8601</cell></row><row><cell>bizitobs service/10S/long</cell><cell>Web/CloudOps</cell><cell>2 1.3776</cell><cell>saugeen/M/short</cell><cell>Nature</cell><cell>1</cell><cell>0.7681</cell></row><row><cell>car parts/M/short</cell><cell>Sales</cell><cell>1 0.8652</cell><cell>saugeen/W/short</cell><cell>Nature</cell><cell>1</cell><cell>1.2569</cell></row><row><cell>covid deaths/D/short</cell><cell>Healthcare</cell><cell cols="2">1 34.3613 solar/10T/short</cell><cell>Energy</cell><cell>1</cell><cell>1.1669</cell></row><row><cell>electricity/15T/short</cell><cell>Energy</cell><cell>1 1.0297</cell><cell>solar/10T/medium</cell><cell>Energy</cell><cell>1</cell><cell>0.8224</cell></row><row><cell>electricity/15T/medium</cell><cell>Energy</cell><cell>1 0.8463</cell><cell>solar/10T/long</cell><cell>Energy</cell><cell>1</cell><cell>0.8593</cell></row><row><cell>electricity/15T/long</cell><cell>Energy</cell><cell>1 0.8917</cell><cell>solar/D/short</cell><cell>Energy</cell><cell>1</cell><cell>1.0168</cell></row><row><cell>electricity/D/short</cell><cell>Energy</cell><cell>1 1.4781</cell><cell>solar/H/short</cell><cell>Energy</cell><cell>1</cell><cell>0.8386</cell></row><row><cell>electricity/H/short</cell><cell>Energy</cell><cell>1 0.9649</cell><cell>solar/H/medium</cell><cell>Energy</cell><cell>1</cell><cell>0.8806</cell></row><row><cell>electricity/H/medium</cell><cell>Energy</cell><cell>1 1.0626</cell><cell>solar/H/long</cell><cell>Energy</cell><cell>1</cell><cell>0.9416</cell></row><row><cell>electricity/H/long</cell><cell>Energy</cell><cell>1 1.1940</cell><cell>solar/W/short</cell><cell>Energy</cell><cell>1</cell><cell>1.4687</cell></row><row><cell>electricity/W/short</cell><cell>Energy</cell><cell>1 1.6038</cell><cell>temperature rain/D/short</cell><cell>Nature</cell><cell>1</cell><cell>1.3853</cell></row><row><cell>ett1/15T/short</cell><cell>Energy</cell><cell>7 0.6924</cell><cell>us births/D/short</cell><cell cols="2">Healthcare 1</cell><cell>0.3505</cell></row><row><cell>ett1/15T/medium</cell><cell>Energy</cell><cell>7 1.0419</cell><cell>us births/M/short</cell><cell cols="2">Healthcare 1</cell><cell>0.7934</cell></row><row><cell>ett1/15T/long</cell><cell>Energy</cell><cell>7 1.0498</cell><cell>us births/W/short</cell><cell cols="2">Healthcare 1</cell><cell>1.0961</cell></row><row><cell>ett1/D/short</cell><cell>Energy</cell><cell>7 1.6066</cell><cell></cell><cell></cell><cell></cell><cell></cell></row></table></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" type="table" xml:id="tab_8"><head>Table 11 .</head><label>11</label><figDesc>Datasets used for Figure2, a subset of GiftEval which has all three short/medium/long forecasting horizons.</figDesc><table><row><cell>Dataset</cell><cell>Frequency</cell></row><row><cell cols="2">bitbrains fast storage 5T</cell></row><row><cell>bitbrains rnd</cell><cell>5T</cell></row><row><cell>bizitobs application</cell><cell>10S</cell></row><row><cell>bizitobs l2c</cell><cell>5T</cell></row><row><cell>bizitobs l2c</cell><cell>H</cell></row><row><cell>bizitobs service</cell><cell>10S</cell></row><row><cell>electricity</cell><cell>15T</cell></row><row><cell>electricity</cell><cell>H</cell></row><row><cell>ett1</cell><cell>15T</cell></row><row><cell>ett1</cell><cell>H</cell></row><row><cell>ett2</cell><cell>15T</cell></row><row><cell>ett2</cell><cell>H</cell></row><row><cell>jena weather</cell><cell>10T</cell></row><row><cell>jena weather</cell><cell>H</cell></row><row><cell>kdd cup 2018</cell><cell>H</cell></row><row><cell>loop seattle</cell><cell>5T</cell></row><row><cell>loop seattle</cell><cell>H</cell></row><row><cell>m dense</cell><cell>H</cell></row><row><cell>solar</cell><cell>10T</cell></row><row><cell>solar</cell><cell>H</cell></row><row><cell>sz taxi</cell><cell>15T</cell></row></table></figure>
+			<note xmlns="http://www.tei-c.org/ns/1.0" place="foot" n="1" xml:id="foot_0"><p>We unnormalize the model's output for prediction.</p></note>
+			<note xmlns="http://www.tei-c.org/ns/1.0" place="foot" n="2" xml:id="foot_1"><p>https://huggingface.co/datasets/Salesforce/GiftEvalPretrain</p></note>
+			<note xmlns="http://www.tei-c.org/ns/1.0" place="foot" n="3" xml:id="foot_2"><p>The official zero-shot performance of pretrained TTM-R2 lags significantly behind other baselines (MASE=1.02), so we compare against a stronger finetuned model (TTM-R2-Finetuned) which achieves MASE of 0.756.</p></note>
+			<note xmlns="http://www.tei-c.org/ns/1.0" place="foot" n="4" xml:id="foot_3"><p>For instance, the values for Electricity for YingLong were imputed using the MAE values obtained by Chronos-2.</p></note>
+		</body>
+		<back>
+
+			<div type="acknowledgement">
+<div><head>Acknowledgments</head><p>This work was supported by the <rs type="funder">National Science Foundation</rs> under <rs type="grantName">CAREER Award</rs> No. <rs type="grantNumber">2441872</rs> and a gift from <rs type="funder">Qube RT</rs>.</p></div>
+			</div>
+			<listOrg type="funding">
+				<org type="funding" xml:id="_s9GGmgR">
+					<idno type="grant-number">2441872</idno>
+					<orgName type="grant-name">CAREER Award</orgName>
+				</org>
+			</listOrg>
+
+			<div type="availability">
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>A. Data generation and augmentation details</head><p>A.1. Synthetic data composition Algorithm 1 KernelSynth Data Generation Require: Length L, Kernel bank K (e.g., RBF, Periodic, Linear, Rational Quadratic), Max kernels J max = 5.</p><p>1: Compose Kernel κ: 2: Sample number of kernels N ∼ Uniform{1, J max } 3: Sample base kernel κ ∼ K 4: for i = 2 to N do 5:</p></div>
+			</div>
+
+			<div type="annex">
+<div xmlns="http://www.tei-c.org/ns/1.0"><p>Constant: µ(t) = 0 (or sample constant c) 15: end if 16: Sample Time Series from Gaussian Process: 17: Compute covariance matrix Σ ∈ R L×L where Σ uv = κ(u, v) 18: Compute mean vector m ∈ R L where m t = µ(t) 19: Sample t syn ∼ N (m, Σ) {Multivariate Gaussian} 20: return t syn We make use of standard synthetic data generation practices that has been developed in the community.</p><p>KernelSynth <ref type="bibr" target="#b2">(Ansari et al., 2024)</ref> introduced the use of Gaussian Process(GP) for synthetic data generation. In particular, we define a kernel bank K, and sample j ∼ U {1, 5} kernels from K and compose them using random binary additive or multiplicative operations. This forms a composite kernel κ. We also sample µ which follows a linear trend with slope m ∼ U [-0.01, 0.01] and intercept c ∼ U [-0.1, 0.1] with probability 1/2 and constant otherwise. We then use κ and µ in a Gaussian process to sample the synthetic time series t syn according to</p><p>We use the following sets of kernels in our kernel bank K as shown in Table <ref type="table">8</ref>, applied to points L syn evenly spaced points x, x ′ ∈ [0, 1]. To enable efficient sampling, we use batched Cholesky decomposition. The constant, linear, RBF and Rational Quadratic kernels were introduced in KernelSynth <ref type="bibr" target="#b2">(Ansari et al., 2024)</ref>. The Matern kernel was used in TempoPFN <ref type="bibr" target="#b55">(Moroshan et al., 2025)</ref> as a more robust and accurate representation of how GPs can model real world data. We use the following set of periods P = {24, <ref type="bibr">48, 96, 168, 336, 672, 7, 14, 30, 60, 365, 730, 4, 26, 52, 6, 12, 40, 10}</ref>(normalized by time series length L syn ) to capture patterns of various timescales.</p><p>Beyond GP data, we also include spike processes <ref type="bibr" target="#b4">(Auer et al., 2025;</ref><ref type="bibr" target="#b55">Moroshan et al., 2025;</ref><ref type="bibr" target="#b23">Feng et al., 2025)</ref> and TSI <ref type="bibr" target="#b5">(Bahrpeyma et al., 2021)</ref> as used in Chronos-2 to help in learning simple trends and periodic patterns.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>A.2. Data augmentation specifics</head><p>Here we present the various data augmentation strategies that we found to have been helpful in improving the data diversity during training. We demonstrate this in a full pipeline detailed in Algorithm 4. Our pipeline applies transformations at both the instance level (sequentially) and the batch level (Mixup).</p><p>1. Downsampling: To allow the model to learn features across varying temporal resolutions, we downsample the raw time series t by a factor k. This effectively compresses long-term dependencies into the context window L.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>Algorithm 4 Pretraining Data Augmentation Pipeline</head><p>Input: Dataset D, Batch size B, Context length L Hyperparameters: p(downsample), [k min , k max ] (Downsample probability, range of downsample ratios) p(modulate), p(flip-x), p(flip-y) (Amp. Mod., Flip-x, Flip-y probabilities)</p><p>Table <ref type="table">10</ref>. MASE scores versus parameter size breakdowns for models compared in Figure <ref type="figure">1</ref>. Note that the data leaked version of Chronos-2 has been trained on datasets within Gift-Eval and hence is not included within Figure <ref type="figure">1</ref> for fair zero-shot comparison, but is still a strong frame of reference for SOTA foundation models.  Let p 1 be the amplitude of the highest peak at frequency f 1 , and p 2 be the amplitude of the second highest peak. Let p DC denote the DC component (amplitude at f = 0), and let µ A , σ A be the mean and standard deviation of the spectral amplitudes, respectively. We consider the seasonality at f 1 significant if and only if all the following conditions are met:</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>Family</head><p>Equation 1 ensures a single dominant frequency exists, mitigating ambiguity from multi-scale seasonality which we leave for future work. Equation 2 ensures the seasonality is stronger than the trend component, and Equation <ref type="formula">3</ref>provides statistical confidence that the signal is not merely noise.</p><p>If these conditions are satisfied, we calculate the primary period S = 1/f 1 . To ensure the model captures sufficient temporal context, we compute a downsampling stride k such that at least M full periods fit within the fixed context window L:</p><p>The input sequence is then downsampled by taking every k-th point, effectively expanding the receptive field of the model to cover k • L time steps while maintaining the fixed input dimension L. If the spectral peaks do not meet the criteria, we do not downsample. We find that typically applying this downsampling algorithm to single time series samples at each time has high variance, resulting in different downsampling ratios for each sequence and in practice we average the downsampling ratios across the same frequency within the same dataset. We use α = 2, β = 4, M = 8. Downsampling is not applied to short term forecast for which the forecast horizon is significantly shorter than the seasonality since this reduces the resolution of the predictions without capturing further seasonality information.</p></div>			</div>
+			<div type="references">
+
+				<listBibl>
+
+<biblStruct xml:id="b0">
+	<monogr>
+		<title level="m" type="main">Gift-eval: A benchmark for general time series forecasting model evaluation</title>
+		<author>
+			<persName><forename type="first">T</forename><surname>Aksu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Woo</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Savarese</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Xiong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Sahoo</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2410.10393" />
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b1">
+	<monogr>
+		<title level="m" type="main">Gluonts: Probabilistic time series models in python</title>
+		<author>
+			<persName><forename type="first">A</forename><surname>Alexandrov</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Benidis</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Bohlke-Schneider</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">V</forename><surname>Flunkert</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Gasthaus</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Januschowski</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><forename type="middle">C</forename><surname>Maddix</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Rangapuram</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Salinas</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Schulz</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Stella</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><forename type="middle">C</forename><surname>Türkmen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Wang</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/1906.05264" />
+		<imprint>
+			<date type="published" when="2019">2019</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b2">
+	<monogr>
+		<author>
+			<persName><forename type="first">A</forename><forename type="middle">F</forename><surname>Ansari</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Stella</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Turkmen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Mercado</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Shen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">O</forename><surname>Shchur</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><forename type="middle">S</forename><surname>Rangapuram</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><forename type="middle">P</forename><surname>Arango</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Kapoor</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Zschiegner</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><forename type="middle">C</forename><surname>Maddix</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><forename type="middle">W</forename><surname>Mahoney</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Torkkola</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><forename type="middle">G</forename><surname>Wilson</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Bohlke-Schneider</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Chronos</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2403.07815" />
+		<title level="m">Learning the language of time series</title>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b3">
+	<monogr>
+		<author>
+			<persName><forename type="first">A</forename><forename type="middle">F</forename><surname>Ansari</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">O</forename><surname>Shchur</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Küken</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Auer</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Han</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Mercado</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><forename type="middle">S</forename><surname>Rangapuram</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Shen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Stella</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Goswami</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Kapoor</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><forename type="middle">C</forename><surname>Maddix</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Guerron</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Hu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Yin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">N</forename><surname>Erickson</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><forename type="middle">M</forename><surname>Desai</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Rangwala</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Karypis</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Bohlke-Schneider</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2510.15821" />
+		<title level="m">Chronos-2: From univariate to universal forecasting</title>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b4">
+	<analytic>
+		<title level="a" type="main">Zero-shot forecasting across long and short horizons with enhanced in-context learning</title>
+		<author>
+			<persName><forename type="first">A</forename><surname>Auer</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Podest</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Klotz</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Böck</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Klambauer</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Hochreiter</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Tirex</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=v7UqniC9pF" />
+	</analytic>
+	<monogr>
+		<title level="m">The Thirty-ninth Annual Conference on Neural Information Processing Systems</title>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b5">
+	<analytic>
+		<title level="a" type="main">A methodology for validating diversity in synthetic time series generation</title>
+		<author>
+			<persName><forename type="first">F</forename><surname>Bahrpeyma</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Roantree</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Cappellari</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Scriney</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Mccarren</surname></persName>
+		</author>
+		<idno type="DOI">10.1016/j.mex.2021.101459</idno>
+		<ptr target="https://doi.org/10.1016/j.mex.2021.101459" />
+	</analytic>
+	<monogr>
+		<title level="j">MethodsX</title>
+		<idno type="ISSN">2215-0161</idno>
+		<imprint>
+			<biblScope unit="volume">8</biblScope>
+			<biblScope unit="page">101459</biblScope>
+			<date type="published" when="2021">2021</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b6">
+	<analytic>
+		<title level="a" type="main">xLSTM: Extended long short-term memory</title>
+		<author>
+			<persName><forename type="first">M</forename><surname>Beck</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Pöppel</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Spanring</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Auer</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">O</forename><surname>Prudnikova</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><forename type="middle">K</forename><surname>Kopp</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Klambauer</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Brandstetter</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Hochreiter</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=ARAxPPIAhq" />
+	</analytic>
+	<monogr>
+		<title level="m">The Thirty-eighth Annual Conference on Neural Information Processing Systems</title>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b7">
+	<monogr>
+		<author>
+			<persName><forename type="first">S</forename><forename type="middle">K</forename><surname>Bhethanabhotla</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">O</forename><surname>Swelam</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Siems</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Salinas</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">F</forename><surname>Hutter</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2410.09385</idno>
+		<title level="m">Mamba4cast: Efficient zero-shot time series forecasting with state space models</title>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b8">
+	<analytic>
+		<title level="a" type="main">Generalized autoregressive conditional heteroskedasticity</title>
+		<author>
+			<persName><forename type="first">T</forename><surname>Bollerslev</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">Journal of Econometrics</title>
+		<imprint>
+			<biblScope unit="volume">31</biblScope>
+			<biblScope unit="issue">3</biblScope>
+			<biblScope unit="page" from="307" to="327" />
+			<date type="published" when="1986">1986</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b9">
+	<monogr>
+		<author>
+			<persName><forename type="first">R</forename><surname>Bommasani</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2108.07258</idno>
+		<title level="m">On the opportunities and risks of foundation models</title>
+		<imprint>
+			<date type="published" when="2021">2021</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b10">
+	<monogr>
+		<author>
+			<persName><forename type="first">G</forename><forename type="middle">E P</forename><surname>Box</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><forename type="middle">M</forename><surname>Jenkins</surname></persName>
+		</author>
+		<title level="m">Time Series Analysis: Forecasting and Control</title>
+		<imprint>
+			<publisher>Holden-Day</publisher>
+			<date type="published" when="1970">1970</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b11">
+	<analytic>
+		<title level="a" type="main">Llm4ts: Aligning pre-trained llms as data-efficient timeseries forecasters</title>
+		<author>
+			<persName><forename type="first">C</forename><surname>Chang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">W.-Y</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">W.-C</forename><surname>Peng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T.-F</forename><surname>Chen</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">ACM Transactions on Intelligent Systems and Technology</title>
+		<imprint>
+			<biblScope unit="volume">16</biblScope>
+			<biblScope unit="issue">3</biblScope>
+			<biblScope unit="page" from="1" to="20" />
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b12">
+	<monogr>
+		<author>
+			<persName><forename type="first">K</forename><surname>Cho</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Van Merriënboer</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Gulcehre</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Bahdanau</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">F</forename><surname>Bougares</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Schwenk</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Bengio</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:1406.1078</idno>
+		<title level="m">Learning phrase representations using rnn encoder-decoder for statistical machine translation</title>
+		<imprint>
+			<date type="published" when="2014">2014</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b13">
+	<monogr>
+		<title level="m" type="main">Xception: Deep learning with depthwise separable convolutions</title>
+		<author>
+			<persName><forename type="first">F</forename><surname>Chollet</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/1610.02357" />
+		<imprint>
+			<date type="published" when="2017">2017</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b14">
+	<monogr>
+		<author>
+			<persName><forename type="first">B</forename><surname>Cohen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">E</forename><surname>Khwaja</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Doubli</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Lemaachi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Lettieri</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Masson</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Miccinilli</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">E</forename><surname>Ramé</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Q</forename><surname>Ren</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Rostamizadeh</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><forename type="middle">O</forename><surname>Du Terrail</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A.-M</forename><surname>Toon</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Xie</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Xu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">V</forename><surname>Zhukova</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Asker</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Talwalkar</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">O</forename><surname>Abou-Amal</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2505.14766" />
+		<title level="m">This time is different: An observability perspective on time series foundation models</title>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b15">
+	<analytic>
+		<title level="a" type="main">Transformers are ssms: Generalized models and efficient algorithms through structured state space duality</title>
+		<author>
+			<persName><forename type="first">T</forename><surname>Dao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Gu</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of ICML</title>
+		<meeting>ICML</meeting>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b16">
+	<monogr>
+		<title level="m" type="main">A decoder-only foundation model for time-series forecasting</title>
+		<author>
+			<persName><forename type="first">A</forename><surname>Das</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">W</forename><surname>Kong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Sen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Zhou</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2310.10688" />
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b17">
+	<analytic>
+		<title level="a" type="main">Pre-training of deep bidirectional transformers for language understanding</title>
+		<author>
+			<persName><forename type="first">J</forename><surname>Devlin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M.-W</forename><surname>Chang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Lee</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Toutanova</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Bert</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of NAACL-HLT</title>
+		<meeting>NAACL-HLT</meeting>
+		<imprint>
+			<date type="published" when="2019">2019</date>
+			<biblScope unit="page" from="4171" to="4186" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b18">
+	<analytic>
+		<title level="a" type="main">Tsmixer: Lightweight mlp-mixer model for multivariate time series forecasting</title>
+		<author>
+			<persName><forename type="first">V</forename><surname>Ekambaram</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Jati</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">N</forename><surname>Nguyen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Sinthong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Kalagnanam</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of the 29th ACM SIGKDD conference on knowledge discovery and data mining</title>
+		<meeting>the 29th ACM SIGKDD conference on knowledge discovery and data mining</meeting>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+			<biblScope unit="page" from="459" to="469" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b19">
+	<monogr>
+		<author>
+			<persName><forename type="first">V</forename><surname>Ekambaram</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Jati</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Dayama</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Mukherjee</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">N</forename><forename type="middle">H</forename><surname>Nguyen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">W</forename><forename type="middle">M</forename><surname>Gifford</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Reddy</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Kalagnanam</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2401.03955" />
+		<title level="m">Tiny time mixers (ttms): Fast pre-trained models for enhanced zero/few-shot forecasting of multivariate time series</title>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b20">
+	<analytic>
+		<title level="a" type="main">Finding structure in time</title>
+		<author>
+			<persName><forename type="first">J</forename><forename type="middle">L</forename><surname>Elman</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">Cognitive Science</title>
+		<imprint>
+			<biblScope unit="volume">14</biblScope>
+			<biblScope unit="issue">2</biblScope>
+			<biblScope unit="page" from="179" to="211" />
+			<date type="published" when="1990">1990</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b21">
+	<monogr>
+		<title level="m" type="main">Buildingsbench: A largescale dataset of 900k buildings and benchmark for shortterm load forecasting</title>
+		<author>
+			<persName><forename type="first">P</forename><surname>Emami</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Sahu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Graf</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2307.00142" />
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b22">
+	<analytic>
+		<title level="a" type="main">Autoregressive conditional heteroscedasticity with estimates of the variance of united kingdom inflation</title>
+		<author>
+			<persName><forename type="first">R</forename><forename type="middle">F</forename><surname>Engle</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">Econometrica</title>
+		<imprint>
+			<biblScope unit="volume">50</biblScope>
+			<biblScope unit="issue">4</biblScope>
+			<biblScope unit="page" from="987" to="1007" />
+			<date type="published" when="1982">1982</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b23">
+	<monogr>
+		<title level="m" type="main">Towards adaptive and generalizable time series foundation models</title>
+		<author>
+			<persName><forename type="first">K</forename><surname>Feng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Lan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Fang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">W</forename><surname>He</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Ma</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Lu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Ren</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Kairos</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2509.25826" />
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b24">
+	<analytic>
+		<title level="a" type="main">Hungry Hungry Hippos: Towards language modeling with state space models</title>
+		<author>
+			<persName><forename type="first">D</forename><forename type="middle">Y</forename><surname>Fu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Dao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><forename type="middle">K</forename><surname>Saab</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><forename type="middle">W</forename><surname>Thomas</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Rudra</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Ré</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">International Conference on Learning Representations</title>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b25">
+	<analytic>
+		<title level="a" type="main">Simple hardwareefficient long convolutions for sequence modeling</title>
+		<author>
+			<persName><forename type="first">D</forename><forename type="middle">Y</forename><surname>Fu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">E</forename><forename type="middle">L</forename><surname>Epstein</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">E</forename><surname>Nguyen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><forename type="middle">W</forename><surname>Thomas</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Dao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Rudra</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Ré</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">International Conference on Machine Learning</title>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b26">
+	<monogr>
+		<title/>
+		<author>
+			<persName><forename type="first">A</forename><surname>Garza</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Challu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Mergenthaler-Canseco</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2310.03589</idno>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b27">
+	<monogr>
+		<author>
+			<persName><forename type="first">P</forename><surname>Glorioso</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Q</forename><surname>Anthony</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Tokpanov</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Whittington</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Pilault</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Ibrahim</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Millidge</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Zamba</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2405.16712</idno>
+		<title level="m">A compact 7b ssm hybrid model</title>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b28">
+	<monogr>
+		<title level="m" type="main">Monash time series forecasting archive</title>
+		<author>
+			<persName><forename type="first">R</forename><surname>Godahewa</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Bergmeir</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><forename type="middle">I</forename><surname>Webb</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><forename type="middle">J</forename><surname>Hyndman</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Montero-Manso</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2105.06643" />
+		<imprint>
+			<date type="published" when="2021">2021</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b29">
+	<monogr>
+		<title level="m" type="main">R2n2: Residual recurrent neural networks for multivariate time series forecasting</title>
+		<author>
+			<persName><forename type="first">H</forename><surname>Goel</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">I</forename><surname>Melnyk</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Banerjee</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:1709.03159</idno>
+		<imprint>
+			<date type="published" when="2017">2017</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b30">
+	<monogr>
+		<title level="m" type="main">Flowstate: Sampling rate invariant time series forecasting</title>
+		<author>
+			<persName><forename type="first">L</forename><surname>Graf</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Ortner</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Woźniak</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Pantazi</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2508.05287" />
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b31">
+	<analytic>
+		<title level="a" type="main">Linear-time sequence modeling with selective state spaces</title>
+		<author>
+			<persName><forename type="first">A</forename><surname>Gu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Dao</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Mamba</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of CoLM</title>
+		<meeting>CoLM</meeting>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b32">
+	<analytic>
+		<title level="a" type="main">Efficiently modeling long sequences with structured state spaces</title>
+		<author>
+			<persName><forename type="first">A</forename><surname>Gu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Goel</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Ré</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of ICLR</title>
+		<meeting>ICLR</meeting>
+		<imprint>
+			<date type="published" when="2022">2022</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b33">
+	<monogr>
+		<author>
+			<persName><forename type="first">A</forename><forename type="middle">C</forename><surname>Harvey</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Forecasting</surname></persName>
+		</author>
+		<title level="m">Structural Time Series Models and the Kalman Filter</title>
+		<meeting><address><addrLine>Cambridge</addrLine></address></meeting>
+		<imprint>
+			<publisher>Cambridge University Press</publisher>
+			<date type="published" when="1990">1990</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b34">
+	<analytic>
+		<title level="a" type="main">The ERA5 global reanalysis</title>
+		<author>
+			<persName><forename type="first">H</forename><surname>Hersbach</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Bell</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Berrisford</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Hirahara</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Horányi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Muñoz-Sabater</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Nicolas</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Peubey</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Radu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Schepers</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Simmons</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Soci</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Abdalla</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Abellan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Balsamo</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Bechtold</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Biavati</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Bidlot</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Bonavita</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>De Chiara</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Dahlgren</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Dee</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Diamantakis</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Dragani</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Flemming</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Forbes</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Fuentes</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Geer</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Haimberger</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Healy</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><forename type="middle">J</forename><surname>Hogan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">E</forename><surname>Hólm</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Janisková</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Keeley</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Laloyaux</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Lopez</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Lupu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Radnoti</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>De Rosnay</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">I</forename><surname>Rozum</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">F</forename><surname>Vamborg</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Villaume</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J.-N</forename><surname>Thépaut</surname></persName>
+		</author>
+		<idno type="DOI">10.1002/qj.3803</idno>
+		<ptr target="https://rmets.onlinelibrary.wiley.com/doi/abs/10.1002/qj.3803" />
+	</analytic>
+	<monogr>
+		<title level="j">Quarterly Journal of the Royal Meteorological Society</title>
+		<imprint>
+			<biblScope unit="volume">146</biblScope>
+			<biblScope unit="issue">730</biblScope>
+			<biblScope unit="page" from="1999" to="2049" />
+			<date type="published" when="2020">2020</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b35">
+	<analytic>
+		<title level="a" type="main">Recurrent neural networks for time series forecasting: Current status and future directions</title>
+		<author>
+			<persName><forename type="first">H</forename><surname>Hewamalage</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Bergmeir</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Bandara</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">International Journal of Forecasting</title>
+		<imprint>
+			<biblScope unit="volume">37</biblScope>
+			<biblScope unit="issue">1</biblScope>
+			<biblScope unit="page" from="388" to="427" />
+			<date type="published" when="2021">2021</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b36">
+	<analytic>
+		<title level="a" type="main">Long short-term memory</title>
+		<author>
+			<persName><forename type="first">S</forename><surname>Hochreiter</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Schmidhuber</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">Neural Computation</title>
+		<imprint>
+			<biblScope unit="volume">9</biblScope>
+			<biblScope unit="issue">8</biblScope>
+			<biblScope unit="page" from="1735" to="1780" />
+			<date type="published" when="1997">1997</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b37">
+	<analytic>
+		<title level="a" type="main">Automatic time series forecasting: The forecast package for r</title>
+		<author>
+			<persName><forename type="first">R</forename><forename type="middle">J</forename><surname>Hyndman</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Khandakar</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">Journal of Statistical Software</title>
+		<imprint>
+			<biblScope unit="volume">27</biblScope>
+			<biblScope unit="issue">3</biblScope>
+			<biblScope unit="page" from="1" to="22" />
+			<date type="published" when="2008">2008</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b38">
+	<monogr>
+		<author>
+			<persName><forename type="first">M</forename><surname>Jin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Ma</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Chu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><forename type="middle">Y</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Shi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P.-Y</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Liang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y.-F</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Pan</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2310.01728</idno>
+		<title level="m">Time-llm: Time series forecasting by reprogramming large language models</title>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b39">
+	<analytic>
+		<title level="a" type="main">Transformers are rnns: fast autoregressive transformers with linear attention</title>
+		<author>
+			<persName><forename type="first">A</forename><surname>Katharopoulos</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Vyas</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">N</forename><surname>Pappas</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">F</forename><surname>Fleuret</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of the 37th International Conference on Machine Learning, ICML&apos;20. JMLR.org</title>
+		<meeting>the 37th International Conference on Machine Learning, ICML&apos;20. JMLR.org</meeting>
+		<imprint>
+			<date type="published" when="2020">2020</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b40">
+	<monogr>
+		<author>
+			<persName><forename type="first">S</forename><forename type="middle">R K</forename><surname>Kottapalli</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Hubli</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Chandrashekhara</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Jain</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Hubli</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Botla</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Doddaiah</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2504.04011</idno>
+		<title level="m">Foundation models for time series: A survey</title>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b41">
+	<analytic>
+		<title level="a" type="main">A novel time series analysis method based on dynamic convolution and 3dvariation</title>
+		<author>
+			<persName><forename type="first">C</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Diao</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Tvnet</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=MZDdTzN6Cy" />
+	</analytic>
+	<monogr>
+		<title level="m">The Thirteenth International Conference on Learning Representations</title>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b42">
+	<analytic>
+		<title level="a" type="main">Foundation models for time series analysis: A tutorial and survey</title>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Liang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Wen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Nie</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Jiang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Jin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Song</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Pan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Q</forename><surname>Wen</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of the 30th ACM SIGKDD conference on knowledge discovery and data mining</title>
+		<meeting>the 30th ACM SIGKDD conference on knowledge discovery and data mining</meeting>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+			<biblScope unit="page" from="6555" to="6565" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b43">
+	<monogr>
+		<author>
+			<persName><forename type="first">O</forename><surname>Lieber</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Lenz</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Bata</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Cohen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Osin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">I</forename><surname>Dalmedigos</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">E</forename><surname>Safahi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Meirom</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Belinkov</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Shalev-Shwartz</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2403.19887</idno>
+		<title level="m">A hybrid transformer-mamba language model</title>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b44">
+	<monogr>
+		<title level="m" type="main">Moirai 2.0: When less is more for time series forecasting</title>
+		<author>
+			<persName><forename type="first">C</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Aksu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Yan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Q</forename><surname>Pham</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Savarese</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Sahoo</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Xiong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Li</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2511.11698" />
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b45">
+	<analytic>
+		<title level="a" type="main">SCINet: Time series modeling and forecasting with sample convolution and interaction</title>
+		<author>
+			<persName><forename type="first">M</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Zeng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Xu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Q</forename><surname>Lai</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Ma</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Q</forename><surname>Xu</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=AyajSjTAzmg" />
+	</analytic>
+	<monogr>
+		<title level="m">Advances in Neural Information Processing Systems</title>
+		<editor>
+			<persName><forename type="first">A</forename><forename type="middle">H</forename><surname>Oh</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">A</forename><surname>Agarwal</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">D</forename><surname>Belgrave</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">K</forename><surname>Cho</surname></persName>
+		</editor>
+		<imprint>
+			<date type="published" when="2022">2022</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b46">
+	<analytic>
+		<title level="a" type="main">Low-complexity pyramidal attention for long-range time series modeling and forecasting</title>
+		<author>
+			<persName><forename type="first">S</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Yu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Liao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">W</forename><surname>Lin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><forename type="middle">X</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Dustdar</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Pyraformer</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=0EXmFzUn5I" />
+	</analytic>
+	<monogr>
+		<title level="m">International Conference on Learning Representations</title>
+		<imprint>
+			<date type="published" when="2022">2022</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b47">
+	<monogr>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Ott</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">N</forename><surname>Goyal</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Du</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Joshi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">O</forename><surname>Levy</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Lewis</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Zettlemoyer</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">V</forename><surname>Stoyanov</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Roberta</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:1907.11692</idno>
+		<title level="m">A robustly optimized bert pretraining approach</title>
+		<imprint>
+			<date type="published" when="2019">2019</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b48">
+	<analytic>
+		<title level="a" type="main">Timer: Generative pre-trained transformers are large time series models</title>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Huang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Long</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=bYRYb7DMNo" />
+	</analytic>
+	<monogr>
+		<title level="m">Forty-first International Conference on Machine Learning</title>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b49">
+	<analytic>
+		<title level="a" type="main">Timer-XL: Long-context transformers for unified time series forecasting</title>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Qin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Huang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Long</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=KMCJXjlDDr" />
+	</analytic>
+	<monogr>
+		<title level="m">The Thirteenth International Conference on Learning Representations</title>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b50">
+	<analytic>
+		<title level="a" type="main">A family of highly capable time series foundation models</title>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Qin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Shi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Yang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Huang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Long</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Sundial</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=LO7ciRpjI5" />
+	</analytic>
+	<monogr>
+		<title level="m">Forty-second International Conference on Machine Learning</title>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b51">
+	<analytic>
+		<title level="a" type="main">Decoupled weight decay regularization</title>
+		<author>
+			<persName><forename type="first">I</forename><surname>Loshchilov</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">F</forename><surname>Hutter</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=Bkg6RiCqY7" />
+	</analytic>
+	<monogr>
+		<title level="m">International Conference on Learning Representations</title>
+		<imprint>
+			<date type="published" when="2019">2019</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b52">
+	<analytic>
+		<title level="a" type="main">ModernTCN: A modern pure convolution structure for general time series analysis</title>
+		<author>
+			<persName><forename type="first">D</forename><surname>Luo</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Wang</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=vpJMJerXHU" />
+	</analytic>
+	<monogr>
+		<title level="m">The Twelfth International Conference on Learning Representations</title>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b53">
+	<monogr>
+		<author>
+			<persName><forename type="first">H</forename><surname>Ma</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">W</forename><surname>Zhao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Yang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Ji</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Xu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Jing</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Yang</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2411.02941</idno>
+		<title level="m">A mamba foundation model for time series forecasting</title>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b54">
+	<analytic>
+		<title level="a" type="main">Laughing hyena distillery: Extracting compact recurrences from convolutions</title>
+		<author>
+			<persName><forename type="first">S</forename><surname>Massaroli</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Poli</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><forename type="middle">Y</forename><surname>Fu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Kumbong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><forename type="middle">N</forename><surname>Parnichkun</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><forename type="middle">W</forename><surname>Romero</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Timalsina</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Q</forename><surname>Mcintyre</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Rudra</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Re</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Ermon</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Bengio</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=OWELckerm6" />
+	</analytic>
+	<monogr>
+		<title level="m">Thirty-seventh Conference on Neural Information Processing Systems</title>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b55">
+	<monogr>
+		<title level="m" type="main">Tempopfn: Synthetic pre-training of linear rnns for zero-shot time series forecasting</title>
+		<author>
+			<persName><forename type="first">V</forename><surname>Moroshan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Siems</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Zela</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Carstensen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">F</forename><surname>Hutter</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2510.25502" />
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b56">
+	<analytic>
+		<title level="a" type="main">A time series is worth 64 words: Long-term forecasting with transformers</title>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Nie</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">N</forename><forename type="middle">H</forename><surname>Nguyen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Sinthong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Kalagnanam</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=Jbdc0vTOcol" />
+	</analytic>
+	<monogr>
+		<title level="m">The Eleventh International Conference on Learning Representations</title>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b57">
+	<monogr>
+		<title level="m" type="main">Super-linear: A lightweight pretrained mixture of linear experts for time series forecasting</title>
+		<author>
+			<persName><forename type="first">L</forename><surname>Nochumsohn</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Marshanski</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Zisling</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">O</forename><surname>Azencot</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2509.15105" />
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b58">
+	<monogr>
+		<author>
+			<persName><forename type="first">M</forename><surname>Oquab</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Darcet</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Moutakanni</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Vo</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Szafraniec</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">V</forename><surname>Khalidov</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Fernandez</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Haziza</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">F</forename><surname>Massa</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>El-Nouby</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2304.07193</idno>
+		<title level="m">Dinov2: Learning robust visual features without supervision</title>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b59">
+	<analytic>
+		<title level="a" type="main">Random feature attention</title>
+		<author>
+			<persName><forename type="first">H</forename><surname>Peng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">N</forename><surname>Pappas</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Yogatama</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Schwartz</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">N</forename><forename type="middle">A</forename><surname>Smith</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Kong</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of ICLR</title>
+		<meeting>ICLR</meeting>
+		<imprint>
+			<date type="published" when="2021">2021</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b60">
+	<monogr>
+		<title level="m" type="main">Recurrent neural networks for time series forecasting</title>
+		<author>
+			<persName><forename type="first">G</forename><surname>Petneházi</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:1901.00069</idno>
+		<imprint>
+			<date type="published" when="2019">2019</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b61">
+	<monogr>
+		<title level="m" type="main">Hyena hierarchy: Towards larger convolutional language models</title>
+		<author>
+			<persName><forename type="first">M</forename><surname>Poli</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Massaroli</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">E</forename><surname>Nguyen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><forename type="middle">Y</forename><surname>Fu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Dao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Baccus</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Bengio</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Ermon</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Ré</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2302.10866</idno>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b62">
+	<monogr>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Qin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Song</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">W</forename><surname>Cheng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Jiang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Cottrell</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:1704.02971</idno>
+		<title level="m">A dual-stage attention-based recurrent neural network for time series prediction</title>
+		<imprint>
+			<date type="published" when="2017">2017</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b63">
+	<analytic>
+		<title level="a" type="main">Lag-llama: Towards foundation models for time series forecasting</title>
+		<author>
+			<persName><forename type="first">K</forename><surname>Rasul</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Ashok</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><forename type="middle">R</forename><surname>Williams</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Khorasani</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Adamopoulos</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Bhagwatkar</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Biloš</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Ghonia</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">N</forename><surname>Hassen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Schneider</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">R0-FoMo: Robustness of Few-shot and Zero-shot Learning in Large Foundation Models</title>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b64">
+	<analytic>
+		<title level="a" type="main">Linear transformers are secretly fast weight programmers</title>
+		<author>
+			<persName><forename type="first">I</forename><surname>Schlag</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Irie</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Schmidhuber</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">International conference on machine learning</title>
+		<imprint>
+			<publisher>PMLR</publisher>
+			<date type="published" when="2021">2021</date>
+			<biblScope unit="page" from="9355" to="9366" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b65">
+	<monogr>
+		<author>
+			<persName><forename type="first">N</forename><surname>Shazeer</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2002.05202</idno>
+		<title level="m">Glu variants improve transformer</title>
+		<imprint>
+			<date type="published" when="2020">2020</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b66">
+	<analytic>
+		<title level="a" type="main">Deltaproduct: Improving state-tracking in linear RNNs via householder products</title>
+		<author>
+			<persName><forename type="first">J</forename><surname>Siems</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Carstensen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Zela</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">F</forename><surname>Hutter</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Pontil</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Grazzi</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=SoRiaijTGr" />
+	</analytic>
+	<monogr>
+		<title level="m">The Thirty-ninth Annual Conference on Neural Information Processing Systems</title>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b67">
+	<analytic>
+		<title level="a" type="main">Simplified state space layers for sequence modeling</title>
+		<author>
+			<persName><forename type="first">J</forename><forename type="middle">T</forename><surname>Smith</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Warrington</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Linderman</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=Ai8Hw3AXqks" />
+	</analytic>
+	<monogr>
+		<title level="m">The Eleventh International Conference on Learning Representations</title>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b68">
+	<analytic>
+		<title level="a" type="main">Conformal time-series forecasting</title>
+		<author>
+			<persName><forename type="first">K</forename><surname>Stankeviciute</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Alaa</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Van Der Schaar</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Advances in Neural Information Processing Systems</title>
+		<editor>
+			<persName><forename type="first">M</forename><surname>Ranzato</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">A</forename><surname>Beygelzimer</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">Y</forename><surname>Dauphin</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">P</forename><surname>Liang</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">J</forename><forename type="middle">W</forename><surname>Vaughan</surname></persName>
+		</editor>
+		<imprint>
+			<biblScope unit="volume">34</biblScope>
+			<biblScope unit="page" from="6216" to="6228" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b69">
+	<monogr>
+		<title/>
+		<author>
+			<persName><surname>Curran Associates</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Inc</surname></persName>
+		</author>
+		<ptr target="https://proceedings.neurips.cc/paper_files/paper/2021/file/312f1ba2a72318edaaa995a67835fad5-Paper.pdf" />
+		<imprint>
+			<date type="published" when="2021">2021</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b70">
+	<monogr>
+		<title level="m" type="main">Conformal prediction for time-series forecasting with change points</title>
+		<author>
+			<persName><forename type="first">S</forename><surname>Sun</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Yu</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2509.02844" />
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b71">
+	<monogr>
+		<title level="m" type="main">Scalable zero-shot time series learner via hierarchical interleaved block attention</title>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Sun</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Fang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Zhu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Q</forename><surname>Deng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Zhou</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Yu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Lu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Ma</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Xihe</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2510.21795" />
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b72">
+	<analytic>
+		<title level="a" type="main">Are language models actually useful for time series forecasting</title>
+		<author>
+			<persName><forename type="first">M</forename><surname>Tan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Merrill</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">V</forename><surname>Gupta</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Althoff</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Hartvigsen</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">Advances in Neural Information Processing Systems</title>
+		<imprint>
+			<biblScope unit="volume">37</biblScope>
+			<biblScope unit="page" from="60162" to="60191" />
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b73">
+	<analytic>
+		<title level="a" type="main">Attention is all you need</title>
+		<author>
+			<persName><forename type="first">A</forename><surname>Vaswani</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">N</forename><surname>Shazeer</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">N</forename><surname>Parmar</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Uszkoreit</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Jones</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><forename type="middle">N</forename><surname>Gomez</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Ł</forename><surname>Kaiser</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">I</forename><surname>Polosukhin</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Advances in Neural Information Processing Systems</title>
+		<imprint>
+			<biblScope unit="volume">30</biblScope>
+			<biblScope unit="page" from="5998" to="6008" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b74">
+	<monogr>
+		<title/>
+		<author>
+			<persName><surname>Curran Associates</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Inc</surname></persName>
+		</author>
+		<ptr target="https://proceedings.neurips.cc/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf" />
+		<imprint>
+			<date type="published" when="2017">2017</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b75">
+	<monogr>
+		<author>
+			<persName><forename type="first">R</forename><surname>Waleffe</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">W</forename><surname>Byeon</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Riach</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Norick</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">V</forename><surname>Korthikanti</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Dao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Gu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Hatamizadeh</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Singh</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Narayanan</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2406.07887</idno>
+		<title level="m">An empirical study of mambabased language models</title>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b76">
+	<monogr>
+		<title level="m" type="main">Timemixer: Decomposable multiscale mixing for time series forecasting</title>
+		<author>
+			<persName><forename type="first">S</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Wu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Shi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Hu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Luo</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Ma</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><forename type="middle">Y</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Zhou</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2405.14616</idno>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b77">
+	<monogr>
+		<title level="m" type="main">Output scaling: Yinglong-delayed chain of thought in a large pretrained time series forecasting model</title>
+		<author>
+			<persName><forename type="first">X</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Zhou</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Gao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Ding</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Zhou</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2506.11029" />
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b78">
+	<analytic>
+		<title level="a" type="main">Understanding warmup-stable-decay learning rates: A river valley loss landscape view</title>
+		<author>
+			<persName><forename type="first">K</forename><surname>Wen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><forename type="middle">S</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><forename type="middle">L W</forename><surname>Hall</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Liang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Ma</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=m51BgoqvbP" />
+	</analytic>
+	<monogr>
+		<title level="m">The Thirteenth International Conference on Learning Representations</title>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b79">
+	<monogr>
+		<title level="m" type="main">Revisiting the generic transformer: Deconstructing a strong baseline for time series foundation models</title>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Wen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">W</forename><forename type="middle">M</forename><surname>Gifford</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Reddy</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><forename type="middle">M</forename><surname>Nguyen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Kalagnanam</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Julius</forename></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><forename type="middle">A</forename></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2602.06909" />
+		<imprint>
+			<date type="published" when="2026">2026</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b80">
+	<monogr>
+		<title level="m" type="main">Unified training of universal time series forecasting transformers</title>
+		<author>
+			<persName><forename type="first">G</forename><surname>Woo</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Kumar</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Xiong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Savarese</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Sahoo</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2402.02592" />
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b81">
+	<analytic>
+		<title level="a" type="main">Autoformer: Decomposition transformers with auto-correlation for longterm series forecasting</title>
+		<author>
+			<persName><forename type="first">H</forename><surname>Wu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Xu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Long</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=I55UqU-M11y" />
+	</analytic>
+	<monogr>
+		<title level="m">Advances in Neural Information Processing Systems</title>
+		<editor>
+			<persName><forename type="first">A</forename><surname>Beygelzimer</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">Y</forename><surname>Dauphin</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">P</forename><surname>Liang</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">J</forename><forename type="middle">W</forename><surname>Vaughan</surname></persName>
+		</editor>
+		<imprint>
+			<date type="published" when="2021">2021</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b82">
+	<analytic>
+		<title level="a" type="main">Gated linear attention transformers with hardware-efficient training</title>
+		<author>
+			<persName><forename type="first">S</forename><surname>Yang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Shen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Panda</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Kim</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=ia5XvxFUJT" />
+	</analytic>
+	<monogr>
+		<title level="m">Forty-first International Conference on Machine Learning</title>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b83">
+	<analytic>
+		<title level="a" type="main">Parallelizing linear transformers with the delta rule over sequence length</title>
+		<author>
+			<persName><forename type="first">S</forename><surname>Yang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Shen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Kim</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of NeurIPS</title>
+		<meeting>NeurIPS</meeting>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b84">
+	<analytic>
+		<title level="a" type="main">Gated delta networks: Improving mamba2 with delta rule</title>
+		<author>
+			<persName><forename type="first">S</forename><surname>Yang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Kautz</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Hatamizadeh</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=r8H7xhYPwz" />
+	</analytic>
+	<monogr>
+		<title level="m">The Thirteenth International Conference on Learning Representations</title>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b85">
+	<analytic>
+		<title level="a" type="main">Are transformers effective for time series forecasting</title>
+		<author>
+			<persName><forename type="first">A</forename><surname>Zeng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Q</forename><surname>Xu</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of the AAAI Conference on Artificial Intelligence</title>
+		<meeting>the AAAI Conference on Artificial Intelligence</meeting>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b86">
+	<monogr>
+		<title level="m" type="main">Informer: Beyond efficient transformer for long sequence time-series forecasting</title>
+		<author>
+			<persName><forename type="first">H</forename><surname>Zhou</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Peng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Xiong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">W</forename><surname>Zhang</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2012.07436" />
+		<imprint>
+			<date type="published" when="2021">2021</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b87">
+	<monogr>
+		<title level="m" type="main">Fedformer: Frequency enhanced decomposed transformer for long-term series forecasting</title>
+		<author>
+			<persName><forename type="first">T</forename><surname>Zhou</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Ma</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Q</forename><surname>Wen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Sun</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Jin</forename></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2201.12740" />
+		<imprint>
+			<date type="published" when="2022">2022</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b88">
+	<analytic>
+		<title level="a" type="main">One fits all: Power general time series analysis by pretrained lm</title>
+		<author>
+			<persName><forename type="first">T</forename><surname>Zhou</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Niu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Sun</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Jin</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">Advances in neural information processing systems</title>
+		<imprint>
+			<biblScope unit="volume">36</biblScope>
+			<biblScope unit="page" from="43322" to="43355" />
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b89">
+	<analytic>
+		<title/>
+	</analytic>
+	<monogr>
+		<title level="j">Algorithm</title>
+		<imprint/>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b90">
+	<analytic>
+		<title level="a" type="main">Require: Length L, Component probabilities P trend , P seas , P noise , P out , P shif t , Trend types T , Seasonality periods P</title>
+		<author>
+			<persName><surname>Tsi (trend</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Wave shapes W, Noise distributions D. 1: Initialize: x t ← 0 for t = 1</title>
+		<editor>
+			<persName><surname>Ansari</surname></persName>
+		</editor>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+	<note>Seasonality, Irregularity) Generation, following Chronos. L 2: Add Trend: 3: if u ∼ U (0, 1) &lt; P trend then 4: Sample trend type τ ∈ T (e.g., linear, exp, poly, piecewise) 5: Sample parameters θ τ (slope, intercept, degree, etc</note>
+</biblStruct>
+
+<biblStruct xml:id="b91">
+	<analytic>
+		<title level="a" type="main">x + f τ (t; : end if 8: Add Seasonality: 9: if u ∼ U (0, 1) &lt; P seas then 10: Sample number of components</title>
+	</analytic>
+	<monogr>
+		<title level="m">K } ⊂ P 12: for k = 1 to K do 13: Sample wave form w ∈ W (e.g., sine, sawtooth, square) 14</title>
+		<imprint/>
+	</monogr>
+	<note>N (0, σ) 22: end if 23: Add Anomalies: 24: if u ∼ U (0, 1). &lt; P out then 25: Add random sparse outliers to x 26: end if 27: if u ∼ U (0, 1) &lt; P shif t then 28: Add random level shifts (step functions) to x 29: end if 30: return x</note>
+</biblStruct>
+
+				</listBibl>
+			</div>
+		</back>
+	</text>
+</TEI>

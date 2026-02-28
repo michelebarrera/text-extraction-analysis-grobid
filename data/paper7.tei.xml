@@ -1,0 +1,1531 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xml:space="preserve" xmlns="http://www.tei-c.org/ns/1.0" 
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+xsi:schemaLocation="http://www.tei-c.org/ns/1.0 https://raw.githubusercontent.com/kermitt2/grobid/master/grobid-home/schemas/xsd/Grobid.xsd"
+ xmlns:xlink="http://www.w3.org/1999/xlink">
+	<teiHeader xml:lang="en">
+		<fileDesc>
+			<titleStmt>
+				<title level="a" type="main">Pushing the Frontier of Black-Box LVLM Attacks via Fine-Grained Detail Targeting</title>
+			</titleStmt>
+			<publicationStmt>
+				<publisher/>
+				<availability status="unknown"><licence/></availability>
+				<date type="published" when="2026-02-19">19 Feb 2026</date>
+			</publicationStmt>
+			<sourceDesc>
+				<biblStruct>
+					<analytic>
+						<author>
+							<persName><forename type="first">Xiaohan</forename><surname>Zhao</surname></persName>
+							<email>xiaohan.zhao@mbzuai.ac.ae</email>
+							<affiliation key="aff0">
+								<orgName type="department">Department of Machine Learning</orgName>
+								<orgName type="laboratory">VILA Lab</orgName>
+								<orgName type="institution">MBZUAI https://vila-lab</orgName>
+								<address>
+									<addrLine>.github.io</addrLine>
+									<settlement>M-Attack-V2-Website</settlement>
+								</address>
+							</affiliation>
+						</author>
+						<author>
+							<persName><forename type="first">Zhaoyi</forename><surname>Li</surname></persName>
+							<email>zhaoyi.li@mbzuai.ac.ae</email>
+							<affiliation key="aff0">
+								<orgName type="department">Department of Machine Learning</orgName>
+								<orgName type="laboratory">VILA Lab</orgName>
+								<orgName type="institution">MBZUAI https://vila-lab</orgName>
+								<address>
+									<addrLine>.github.io</addrLine>
+									<settlement>M-Attack-V2-Website</settlement>
+								</address>
+							</affiliation>
+						</author>
+						<author>
+							<persName><forename type="first">Yaxin</forename><surname>Luo</surname></persName>
+							<email>yaxin.luo@mbzuai.ac.ae</email>
+							<affiliation key="aff0">
+								<orgName type="department">Department of Machine Learning</orgName>
+								<orgName type="laboratory">VILA Lab</orgName>
+								<orgName type="institution">MBZUAI https://vila-lab</orgName>
+								<address>
+									<addrLine>.github.io</addrLine>
+									<settlement>M-Attack-V2-Website</settlement>
+								</address>
+							</affiliation>
+						</author>
+						<author>
+							<persName><forename type="first">Jiacheng</forename><surname>Cui</surname></persName>
+							<email>jiacheng.cui@mbzuai.ac.ae</email>
+							<affiliation key="aff0">
+								<orgName type="department">Department of Machine Learning</orgName>
+								<orgName type="laboratory">VILA Lab</orgName>
+								<orgName type="institution">MBZUAI https://vila-lab</orgName>
+								<address>
+									<addrLine>.github.io</addrLine>
+									<settlement>M-Attack-V2-Website</settlement>
+								</address>
+							</affiliation>
+						</author>
+						<author>
+							<persName><forename type="first">Zhiqiang</forename><surname>Shen</surname></persName>
+							<email>zhiqiang.shen@mbzuai.ac.ae</email>
+							<affiliation key="aff0">
+								<orgName type="department">Department of Machine Learning</orgName>
+								<orgName type="laboratory">VILA Lab</orgName>
+								<orgName type="institution">MBZUAI https://vila-lab</orgName>
+								<address>
+									<addrLine>.github.io</addrLine>
+									<settlement>M-Attack-V2-Website</settlement>
+								</address>
+							</affiliation>
+						</author>
+						<title level="a" type="main">Pushing the Frontier of Black-Box LVLM Attacks via Fine-Grained Detail Targeting</title>
+					</analytic>
+					<monogr>
+						<imprint>
+							<date type="published" when="2026-02-19">19 Feb 2026</date>
+						</imprint>
+					</monogr>
+					<idno type="MD5">99540345B1864D4D7B4DD1128C1346E3</idno>
+					<idno type="arXiv">arXiv:2602.17645v1[cs.LG]</idno>
+				</biblStruct>
+			</sourceDesc>
+		</fileDesc>
+		<encodingDesc>
+			<appInfo>
+				<application version="0.8.0" ident="GROBID" when="2026-02-22T21:30+0000">
+					<desc>GROBID - A machine learning software for extracting information from scholarly documents</desc>
+					<ref target="https://github.com/kermitt2/grobid"/>
+				</application>
+			</appInfo>
+		</encodingDesc>
+		<profileDesc>
+			<abstract>
+<div xmlns="http://www.tei-c.org/ns/1.0"><p>Black-box adversarial attacks on Large Vision-Language Models (LVLMs) are challenging due to missing gradients and complex multimodal boundaries. While prior state-of-the-art transferbased approaches like M-Attack performs well using local crop-level matching between source and target images, we find this induces highvariance, nearly orthogonal gradients across iterations, violating coherent local alignment and destabilizing optimization. We attribute this to (i) ViT translation sensitivity that yields spikelike gradients and (ii) structural asymmetry between source and target crops. We reformulate local matching as an asymmetric expectation over source transformations and target semantics, and build a gradient denoising upgrade to M-Attack. On the source side, Multi-Crop Alignment (MCA) averages gradients from multiple independently sampled local views per iteration to reduce variance. On the target side, Auxiliary Target Alignment (ATA) replaces aggressive target augmentation with a small auxiliary set from a semantically correlated distribution, producing a smoother, lower-variance target manifold. We further reinterpret momentum as Patch Momentum, replaying historical crop gradients, combined with a refined patch-size ensemble (PE + ), this strengthens transferable directions. Together these modules form our M-Attack-V2 in this work, a simple, modular enhancement over M-Attack that substantially improves transfer-based black-box attacks on frontier LVLMs: boosting success rates on Claude-4.0 ( ) from 8%→30%, Gemini-2.5-Pro ( ) from 83%→97%, and GPT-5 ( ) from 98%→100%, outperforming all prior black-box LVLM attacks. Code and data are publicly available at this link.</p></div>
+			</abstract>
+		</profileDesc>
+	</teiHeader>
+	<text xml:lang="en">
+		<body>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="1.">Introduction</head><p>Large Vision-Language Models (LVLMs) have become foundational to modern AI systems, enabling multimodal tasks like image captioning <ref type="bibr" target="#b13">(Hu et al., 2022;</ref><ref type="bibr" target="#b36">Salaberria et al., 2023;</ref><ref type="bibr">Chen et al., 2022b;</ref><ref type="bibr" target="#b39">Tschannen et al., 2023)</ref>, VQA <ref type="bibr" target="#b29">(Luu et al., 2024;</ref><ref type="bibr" target="#b34">Özdemir &amp; Akagündüz, 2024)</ref>, and visual reasoning <ref type="bibr" target="#b32">(OpenAI, 2025)</ref>. However, their visual modules remain vulnerable to adversarial attacks, subtle perturbations that mislead models while remaining imperceptible to humans. Prior efforts, including AttackVLM <ref type="bibr" target="#b44">(Zhao et al., 2023)</ref>, CWA <ref type="bibr" target="#b5">(Chen et al., 2024)</ref>, SSA-CWA <ref type="bibr">(Dong et al., 2023a)</ref>, AdvDiffVLM <ref type="bibr" target="#b12">(Guo et al., 2024)</ref>, and most effectively, recent state-of-the-art M-Attack <ref type="bibr" target="#b24">(Li et al., 2025)</ref>, which have exploited and addressed this weakness through local-level matching and surrogate model ensembles, surpassing 90% success rates on models like GPT-4o.</p><p>Despite promising performance of M-Attack, our analysis reveals that its gradient signals are highly unstable: Even overlapping large pixel regions, two consecutive local crops share nearly orthogonal gradients. In other words, high similarity in the pixel and embedding spaces does not translate to high similarity in the gradient space. The reason is that ViTs' gradient pattern is sensitive to translation. A tiny shift changes pixels contained in each token, altering self-attention. Moreover, patch-wise, spike-like gradient amplifies the mismatch within just a few pixels. We counter this effect by aggregating gradients from multiple crops within the same iteration, a strategy we call Multi-Crop Alignment (MCA). From a theoretical angle, MCA aggregates gradients across multiple views in a single iteration, smoothing local inconsistencies and improving cross-crop gradient stability.</p><p>We further observe that the source and target transformations in M-Attack operate in different semantic spaces: one emphasizing extraction, the other generalization. Aggressive target augmentation introduces harmful variance. Our Auxiliary Target Alignment (ATA) mitigates this by identifying semantically similar auxiliary images to create a low-variance embedding subspace, then applying only mild shifts to enhance transferability without destabilizing the optimization. Classic momentum is reinterpreted under this framework as Patch Momentum (PM), a replay mechanism that recycles past gradients across random crops to stabilize optimization. In parallel, we also re-examine and refine M-Attack's model selection criterion and choose a delicately selected ensemble set with diverse patch sizes to mitigate the difficulty in cross-patch transfer, of which we find that the attention concentrates more on the main object. We term it Patch Ensemble + (PE + ) in our approach.</p><p>Together, these proposed components form the basis of our M-Attack-V2, a robust gradient denoising framework that significantly outperforms existing black-box attack methods. Our method raises attack success rates from 98%→100% on GPT-5, 8%→30% on Claude-4, and 83%→97% on Gemini-2.5-Pro, achieving state-of-the-art performance across the board. This study not only offers a practical, modular attack strategy but also sheds light on the gradient behavior of ViT-based LVLMs under local perturbations. To summarize, our contributions are:</p><p>• We show for the first time that crop-level matching yields high-variance, near-orthogonal gradients (from ViT translation sensitivity and source/target crop asymmetry), destabilizing black-box optimization.</p><p>• We recast local matching as an asymmetric expectation and introduce MCA (multi-view gradient averaging) + ATA (auxiliary semantically correlated targets) to reduce variance and smooth the target manifold.</p><p>• We add Patch Momentum + refined PE + to amplify transferable directions, delivering large ASR gains on frontier LVLMs (e.g., Claude-4.0 8%→30%, Gemini-2.5-Pro 83%→97%, GPT-5 98%→100%).</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="2.">Related Work</head><p>Large Vision Language Models. Transformer-based LVLMs learn visual-semantic representations from large-scale image-text data, enabling tasks like image captioning <ref type="bibr" target="#b36">(Salaberria et al., 2023;</ref><ref type="bibr" target="#b13">Hu et al., 2022;</ref><ref type="bibr">Chen et al., 2022b;</ref><ref type="bibr" target="#b39">Tschannen et al., 2023)</ref>, visual QA <ref type="bibr" target="#b29">(Luu et al., 2024;</ref><ref type="bibr" target="#b34">Özdemir &amp; Akagündüz, 2024)</ref>, and cross-modal reasoning <ref type="bibr" target="#b41">(Wu et al., 2025;</ref><ref type="bibr" target="#b30">Ma et al., 2023;</ref><ref type="bibr" target="#b40">Wang et al., 2024)</ref>. Open-source models such as BLIP-2 <ref type="bibr" target="#b22">(Li et al., 2022)</ref>, Flamingo <ref type="bibr" target="#b0">(Alayrac et al., 2022)</ref>, and LLaVA <ref type="bibr" target="#b26">(Liu et al., 2023)</ref> show strong benchmark performance. Commercial models like <ref type="bibr">GPT-4o, Claude-3.5 (Anthropic, 2024)</ref>, and Gemini-2.0 <ref type="bibr" target="#b38">(Team et al., 2023)</ref> offer advanced reasoning and real-world adaptability, with their successors, GPT-o3 (OpenAI, 2025), Claude 3.7-Sonnet (Anthropic, 2025), and Gemini-2.5-Pro, able to reason over both text and images.</p><p>LVLM transfer-based attack. Black-box attacks include query-based <ref type="bibr" target="#b8">(Dong et al., 2021;</ref><ref type="bibr" target="#b15">Ilyas et al., 2018)</ref> and transfer-based <ref type="bibr" target="#b7">(Dong et al., 2018;</ref><ref type="bibr" target="#b27">Liu et al., 2017)</ref> (our focus in this work). AttackVLM <ref type="bibr" target="#b44">(Zhao et al., 2023)</ref> pioneered transfer-based targeted LVLM attacks using CLIP <ref type="bibr" target="#b35">(Radford et al., 2021)</ref> and BLIP <ref type="bibr" target="#b22">(Li et al., 2022)</ref> surrogates, showing image-to-image feature matching beats cross-modal optimization, later adopted by <ref type="bibr" target="#b5">(Chen et al., 2024;</ref><ref type="bibr" target="#b12">Guo et al., 2024;</ref><ref type="bibr">Dong et al., 2023a;</ref><ref type="bibr" target="#b24">Li et al., 2025)</ref>. CWA <ref type="bibr" target="#b5">(Chen et al., 2024)</ref> and SSA-CWA <ref type="bibr">(Dong et al., 2023a)</ref> extended this to Bard <ref type="bibr" target="#b38">(Team et al., 2023)</ref>: CWA improves transferability via sharpness-aware minimization <ref type="bibr" target="#b11">(Foret et al., 2021;</ref><ref type="bibr">Chen et al., 2022a)</ref>, while SSA-CWA adds spectrum-guided augmentation with SSA <ref type="bibr" target="#b28">(Long et al., 2022)</ref>. AnyAttack <ref type="bibr" target="#b43">(Zhang et al., 2024)</ref> uses image-image matching with large-scale pretraining and fine-tuning. AdvDiffVLM <ref type="bibr" target="#b12">(Guo et al., 2024)</ref> integrates feature matching into diffusion guidance and proposes Adaptive Ensemble Gradient Estimation (AEGE) for smoother ensemble scores. M-Attack further surpasses these via local-level matching of source and target with an ensemble of surrogate models and diverse patch sizes, and FOA-Attack <ref type="bibr" target="#b16">(Jia et al., 2025)</ref> extends alignment from CLS to local patch tokens for additional gains. However, local-level matching still has limitations, we next introduce its background before analyzing and addressing them.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="3.">Approach</head></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="3.1.">Preliminaries and Limitations in Prior Local-level Matching-Based Methods</head><p>Local-level matching in M-Attack <ref type="bibr" target="#b24">(Li et al., 2025)</ref>. Consider a clean source image Xsou and a target image X tar .</p><p>The objective of black-box transfer attacks is to minimally perturb the source image by δ so that the perturbed image X sou = Xsou + δ aligns semantically with the target under an inaccessible black-box model f ξ . Due to the inaccessibility of f ξ , surrogate models f ϕ approximate the semantic alignment via cosine similarity: where CS denotes cosine similarity. M-Attack enhances Eq. ( <ref type="formula">1</ref>) using local-level matching. At iteration i, it applies predefined local transformations T s and T t to extract local area xs i from the source X sou and xt i from the target X tar , respectively. These transformations satisfy essential properties, such as spatial overlap and diversified coverage of extracted local regions {x i } <ref type="bibr" target="#b24">(Li et al., 2025)</ref>. Formally, the local-level matching optimizes:</p><formula xml:id="formula_0">arg max Xsou CS(f ϕ (X sou ), f ϕ (X tar )) s.t. ∥δ∥ p ≤ ϵ,<label>(</label></formula><formula xml:id="formula_1">M Ts,Tt = E f ϕj ∼ϕ [CS(f ϕj (x s i ), f ϕj (x t i ))],<label>(2)</label></formula><p>where f ϕj is sampled from an ensemble of surrogate models ϕ. Intuitively, matching local image regions instead of entire images enhances the semantic precision of perturbations by directing optimization towards semantically significant details. Despite its effectiveness, M-Attack encounters a critical challenge of unexpectedly low gradient similarity, which we investigate in detail next.</p><p>Extremely low gradient overlap. In M-Attack two random crops xs i and xt i are matched at every iteration. One would expect the gradients inside the shared region of two successive source crops, i.e., ∇ xs i M Ts,Tj , ∇ xs i+1 M Ts,Tj , to correlate, because the underlying pixels partly coincide. Surprisingly, Fig. <ref type="figure">2b</ref> shows the opposite: their cosine similarity is almost zero. We then keep the same fixed iteration and repeatedly draw two random crops at different scales and check the cosine similarity of their gradients (Fig. <ref type="figure">2a</ref>).</p><p>Our finding reveals an exponential decay that plateaus below 0.1 once the overlap is smaller than 0.80 IoU. We find that this unexpectedly low gradient overlap mainly stems from two factors: ViTs' inherent translation sensitivity and an overlooked asymmetry in the local matching framework. We first examine the translation effect.</p><p>1) Patch-wise, spike-like gradient sensitive to translation. Because ViTs tokenize images on a fixed, non-overlapping grid, even sub-pixel changes each patch's token mix. These token changes ripple through self-attention, altering weights and redirecting gradients for all tokens, so the resulting pixel-level gradient pattern diverges sharply. Worse, gradient magnitudes are uneven. Therefore, even similar patterns but missing a few pixels might completely break gradient similarity (Fig. <ref type="figure" target="#fig_2">3b</ref>).</p><p>2) Asymmetric Transform Branches. In M-Attack, both the source and target images are cropped, yet playing distinct roles. Cropping the source acts directly in pixel space: it rearranges patch embeddings and attention weights in the forward pass, ending up with guidance of different views. By contrast, cropping the target solely translates the target representation, thereby shifting the reference embedding in feature space. One sculpts the perturbation, while another moves the goalpost, formulating asymmetric matching. M-Attack overlooked this and implementations target translation alternate between a radical crop and an identity map, struggles between explore-exploitation trade-off and potentially risk in high variance of target embedding.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="3.2.">Asymmetric Matching over Expectation</head><p>To mitigate the issues above, we begin by systematically reformulating the original objective function as an expectation over local transformations within an asymmetric matching framework:</p><formula xml:id="formula_2">min ∥Xsou∥p≤ϵ E T ∼D,y∼Y [L(f (T (X sou )), y)] ,<label>(3)</label></formula><p>where D represents the distribution of local transformations, and Y denotes the distribution over target semantics. ∥•∥ p is ℓ p constraint for imperceptibility. Conceptually, this formulation corresponds to embedding specific semantic content y into a locally transformed area T (X sou ), thus highlighting the intrinsic asymmetry compared to M-Attack's original formulation. Within this framework, our proposed enhancements, i.e., Multi-Crop Alignment (MCA) and Auxiliary Target Alignment (ATA), can be interpreted as strategies to improve the accuracy of the expectation estimation and the sampling quality of the semantic distribution Y.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="3.3.">Gradient Denoising via Multi-Crop Alignment</head><p>To obtain a low-variance estimate of expected loss gradient E T ∼D,y∼Y [∇ Xsou L(f (T (X sou )), y)], we draw K independent crops {T } K k=1 and average their individual gradients:</p><formula xml:id="formula_3">∇ Xsou L(X sou ) = 1 K K k=1 ∇ Xsou L(f (T k (X sou )), y). (4)</formula><p>This Multi-Crop Alignment is an unbiased Monte-Carlo estimator, reducing the variance with K &gt; 1.</p><formula xml:id="formula_4">Theorem 3.1. Let g k = ∇ Xsou L(f (T k (X sou )), y) denote the gradient from T k , µ = E[g k ], σ 2 = E[∥g k -µ∥ 2 2 ]</formula><p>denote the mean and variance, and p kℓ denote the pair-wise correlation p kℓ = ⟨g k -µ,g ℓ -µ⟩ ∥g k -µ∥ 2 ∥g ℓ -µ∥ 2 . The gradient variance from K averaged crops is bounded by:</p><formula xml:id="formula_5">Var 1 K K k=1 g k ≤ σ 2 K + K -1 K pσ 2 , (<label>5</label></formula><formula xml:id="formula_6">)</formula><p>where p = E[p kl ], k ̸ = ℓ is the expectation of pair-wise correlation.</p><p>All crops share the same underlying image, so p ̸ = 0. The ideal σ 2 /K decay is therefore tempered by the correlation term pσ 2 . Empirically, averaging a modest number (K = 10) of almost-orthogonal gradients still yields benefit, since the uncorrelated component of the variance shrinks as 1/K. Simultaneously, the optimizer leverages multiple diverse transformations per update, with minimal interference among almost orthogonal gradients. Fig. <ref type="figure" target="#fig_2">3a</ref> illustrates an accelerated convergence with K = 10, with margin improvement provided by K = 100.</p><p>This averaging also alleviates the known translation sensitivity of ViTs. As shown in Fig. <ref type="figure" target="#fig_2">3b</ref>, using two crop sets yields noticeably higher gradient consistency than the singlecrop alignment in M-Attack. In MCA, high-activity regions remain stable (upper left and center right), while the singlecrop case shifts focus from center right to lower left. As a result, gradient similarity across iterations increases from near zero in M-Attack to around 0.2 (Fig. <ref type="figure">2b</ref>).</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="3.4.">Improved Sampling Quality via Auxiliary Target Alignment</head><p>Selecting a representative target embedding y ∈ Y is challenging because the underlying distribution Y is not observable. M-Attack mitigates this by seeding at the unaltered target embedding f (X tar ) and exploring its vicinity with transformed views f (T t (X tar )) thereby sketching a locally semantic manifold that serves as a proxy for Y. However, the exploration-exploitation trade-off remains problematic.</p><p>Radical transformations leap too far, dragging y outside the genuine target region; conservative transformations, while semantically faithful, barely shift the embedding, leaving the optimization starved of informative signal.</p><p>To stabilize this process, we introduce P auxiliary images {X (p) aux } P p=1 as an auxiliary set that acts as additional anchors, collectively forming a richer sub-manifold of aligned embeddings. During each update, we apply a mild random transformation T ∼ D to every anchor, nudging the ensemble in a coherent yet restrained manner and thus providing low-variance, information-rich gradients for optimization. Let</p><formula xml:id="formula_7">y 0 = f ( T0 (X tar )), ỹp = f ( Tp (X (p)</formula><p>aux )) denote sampled semantics in one iteration. The objective L in Eq. ( <ref type="formula">4</ref>) becomes:</p><formula xml:id="formula_8">L = 1 K n k=1 L(f (T k (X sou )), y 0 ) + λ P P p=1 L(f (T k (X sou )), ỹp ) ,<label>(6)</label></formula><p>where λ ∈ [0, 1] interpolates between the original target and its auxiliary neighbors. λ = 0 reduces to M-Attack locallocal matching with single target. ATA trade-off exploration (auxiliary diversity) and exploitation (main-target fidelity), providing low-variance, semantics-preserving updates. The auxiliary set can be built in various ways, e.g., via imageimage retrieval or diffusion methods. We now theoretically analyze ATA with three mild assumptions:</p><formula xml:id="formula_9">Assumption 3.2 (Lipschitz surrogate). Surrogate f is L- continuous: ∥f (y) -f (x)∥ ≤ L∥y -x∥.</formula><p>Assumption 3.3 (Bounded Auxiliary Data). For auxiliary data X (p)</p><p>aux retrieved via semantic similarity to a target X tar , we have:</p><formula xml:id="formula_10">E[∥f (X (p) aux ) -f (X tar )∥] ≤ δ (justification in the appendix). Assumption 3.4 (Bounded transformation). Random trans- formation T ∼ D α f has bounded pixel-level distortion: E[∥T (X) -X∥] ≤ α Theorem 3.5. Let T ∼ D α denote the transformation used in M-Attack, and T ∼ D α with α ≪ α the transforma- tion in M-Attack-V2. Define embedding drift of transfor- mation T applied to X on model f as: ∆ drift (T ; X) := E T [∥f (T (X)) -f (X tar )∥]. Then, we have: ∆ drift (T ; X tar ) ≤ Lα ∆ drift ( T ; X (p) aux ) ≤ Lα + δ.<label>(7)</label></formula><p>Specifically, the term Lα captures the inherent asymmetry caused by transformations in pixel space, requiring the multiplier L to map pixel-level perturbations into embedding space. In contrast, the auxiliary data directly operates in embedding space, leading to a manageable bound δ. Practically,  estimating δ is notably easier than estimating Lα. Lower δ inherently indicates better semantic alignment, allowing M-Attack-V2 to operate effectively under reduced distortion (α ≪ α). Thus, ATA strategically allocates its shift budget toward more meaningful exploration via δ, achieving a sweet spot between exploration and exploitation.</p><p>Computation Analysis. Each iteration back-propagates through the K source crops and only forward-propagates the P auxiliary targets. Since a backward pass is roughly twice as expensive as a forward pass, the per-iteration complexity is O K (3 + P ) , doubling overhead when P = 3. Note that the additional overhead is parallelizable. The detailed analysis and comparison are in the appendix.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="3.5.">Patch Momentum with Built-in Replay Effect</head><p>Momentum, introduced in MI-FGSM <ref type="bibr" target="#b7">(Dong et al., 2018)</ref>, is widely adopted for transferability. Define the momentum buffer as:</p><formula xml:id="formula_11">m r = β 1 m r-1 + (1 -β 1 )∇ xs Lr (x s ), where β 1 ∈ [0, 1)</formula><p>is the first-order momentum coefficient and ∇ xs Lr (x s ) is our MCA-ATA-estimated gradient g r at iteration r. Under the local-matching view, this mechanism can be reinterpreted as formulating a streaming MCA to enforce temporal consistency across gradient directions in the space of random crops. Unrolling the EMA for pixel k exposes an alternative interpretation:</p><formula xml:id="formula_12">m i (k) = (1 -β) i j=0 β j 1{k ∈ M i-j }g i-j (k), (8)</formula><p>where M i denotes the pixel indices included in iteration i, m i (k) and g i (k) respectively denotes momentum and gradient for pixel k. Each crop involving pixel k is therefore replayed in future iterations with geometrically decaying weight, allowing rarely sampled regions (such as corners) to persist long enough to combat the gradient starvation. Spike-shaped gradients are further moderated by the Adam-style <ref type="bibr" target="#b17">(Kingma, 2014)</ref> </p><formula xml:id="formula_13">second moment, v r = β 2 v r-1 + (1 -β 2 )g 2</formula><p>r , whose scaling effect is essential in our empirical study. The momentum does not directly improve gradient similarity but continuously re-injects historical crops across patches, effectively maintaining gradient directionality across local perturbation manifolds. We therefore term it Patch Momentum to distinguish.</p><p>The whole procedure, combining MCA, ATA, and PM, is detailed in Alg. 1. We use a different color to differentiate between M-Attack-V2 and M-Attack. We use PGD <ref type="bibr" target="#b31">(Madry et al., 2018)</ref> with ADAM <ref type="bibr" target="#b17">(Kingma, 2014)</ref> for line 12. Appendix presents analogous results for variants.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="4.">Experiments</head></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="4.1.">Experimental Setup</head><p>Metrics. We adopt the evaluation protocol of M-Attack, reporting the Attack Success Rate (ASR) via GPTScore and the Keywords Matching Rate (KMR) at three thresholds {0.25, 0.5, 1.0}, denoted as KMR a , KMR b , and KMR c <ref type="bibr" target="#b24">(Li et al., 2025)</ref>. KMR measures semantic alignment using  Surrogate candidates. We follow surrogate selections from prior ensemble-based methods <ref type="bibr" target="#b43">(Zhang et al., 2024;</ref><ref type="bibr">Dong et al., 2023a;</ref><ref type="bibr" target="#b12">Guo et al., 2024;</ref><ref type="bibr" target="#b24">Li et al., 2025)</ref>. Our candidate pool covers CLIP variants (CLIP-B/16, B/32, L/14, CLIP † -G/14, CLIP † -B/32, CLIP † -H/14, CLIP † -B/16, CLIP † -BG/14), DinoV2 <ref type="bibr" target="#b33">(Oquab et al., 2023</ref>) (Small, Base, Large), and BLIP-2 <ref type="bibr" target="#b23">(Li et al., 2023)</ref>). Victim models and dataset. We evaluate state-of-the-art commercial MLLMs: GPT-4o/o3/5, Claude-3.7/4.0 (extended), and Gemini-2.5-Pro-Preview <ref type="bibr" target="#b38">(Team et al., 2023)</ref>. Hyperparameters.</p><formula xml:id="formula_14">AnyAttack AnyAttack AttackVLM AttackVLM SSA-CWA SSA-CWA M-Attack-V1 M-Attack-V1 M-Attack-V2 M-Attack-V2</formula><formula xml:id="formula_15">(0 ≤ λ ≤ 1) Output :adversarial image X adv X adv ← X clean for i = 1 to n do Draw K transforms {T k } K k=1 ∼ D, g ← 0 for k = 1 to K (vectorizable) do Draw { Tp } P p=0 ∼ D for j = 1 to m do y 0 = f ( Tp (X tar )), y p = f ( Tp (X<label>(</label></formula><p>Unless noted, perturbations are bounded by ℓ ∞ with ϵ = 16 and optimized for 300 steps. We set the step size to α = 0.75 for Claude and α = 1.0 for all other methods, mirroring M-Attack. For M-Attack-V2, α = 1.275, β 1 = 0.9, β 2 = 0.99 for momentum, K = 10, P = 2, and λ = 0.3 for MCA and ATA. Ablation of these parameters is presented in the appendix.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="4.2.">Selection of Surrogate Model</head><p>Ensembling multiple surrogate models is standard for improving black-box transferability, and recent work primarily designs advanced aggregation schemes over a small set of surrogates <ref type="bibr" target="#b43">(Zhang et al., 2024;</ref><ref type="bibr" target="#b12">Guo et al., 2024)</ref>. In contrast, we begin with a much larger candidate pool and find that which models are included already has a substantial impact: pre-selecting a few strong and complementary surrogates yields clear gains, even with plain averaging. We do not propose a novel aggregation rule; instead, we study a practical large-pool selection strategy that has been less studied and reported before but can serve as the very first stage of a complicated ensemble (pre-select useful candidates, then optionally apply more sophisticated aggregation). Concretely, we first profile embedding-level transferability across all candidates (Tab. 3), which shows that cross-model transfer, especially cross-patch-size transfer, is challenging. Guided by this, we retain only models that (i) perform well Table <ref type="table">1</ref>. Comparison of attack methods on three black-box commercial LVLMs. † : pre-trained on LAION <ref type="bibr" target="#b37">(Schuhmann et al., 2022)</ref>.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>Method</head><p>Model GPT-5 Claude 4.0-thinking Gemini 2.5-Pro Imperceptibility  in Tab. 3 and (ii) span diverse patch sizes to capture complementary inductive biases. A small ablation over these filtered models (see in the appendix) yields our final ensemble, Patch Ensemble + (PE + ), comprising CLIP † -G/14, CLIP-B/16, CLIP-B/32, and CLIP † -B/32. We treat PE + as an efficient, sparse pre-selection that can be used directly or further plugged into aggregation methods. Qualitative attention maps offer an intuitive explanation: selected models consistently focus on the main object, whereas discarded ones tend to spread attention over background regions, suggesting that emphasizing core semantic content is more transferable than dispersed, model-specific patterns.</p><formula xml:id="formula_16">KMR a KMR b KMR c ASR KMR a KMR b KMR c ASR KMR a KMR b KMR c ASR ℓ 1 ↓ ℓ 2 ↓ AttackVLM (</formula></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="4.3.">Evaluation Across LVLMs and Settings</head><p>Transferability across LVLMs. Tab. 1 illustrates the superiority of our M-Attack-V2 compared to the other black-box LVLM attack method with Tab. 2 on open-source models.</p><p>Our method outperforms others by a large margin, including M-Attack. On GPT-5 our M-Attack-V2 even achieves 100% ASR and 97% ASR on Gemini-2.5, with ASR on Claude 4.0-extended further improved by 22%, which is almost impossible for M-Attack to attack. There is also a notable improvement on the KMR, indicating that our method generates a perturbation that targets the semantics more effectively, thus more recognizable by the target blackbox model. Note that these improvements are accompanied by a slight increase in the perturbation norms for l 1 and l 2 . Previous l 1 and l 2 norms are caused by insufficient optimization through near-orthogonal gradients. Our M-Attack-V2 mitigates this issue, exploring more sufficiently inside the l ∞ ball. Thus, it slightly increases the perturbation magnitude while keeping the visual appearance almost unchanged. Fig. <ref type="figure" target="#fig_3">4</ref> shows representative adversarial examples. Recognizing that the raw ℓ p norm may not translate into human imperceptibility, we further evaluate the human imperceptibility in user studies reported in the appendix, showing nearly identical performance between M-Attack and M-Attack-V2, which consistently outperform all other methods.</p><p>Performance under varying budgets. Fig. <ref type="figure" target="#fig_7">6</ref> compares performance under varying optimization budgets (total steps). Our method converges faster, approaching optimal results within 300 steps, whereas M-Attack requires an additional Robustness Against Vision-Reasoning Models. Reasoning in text modality does not extend to alter information from the vision backbone. Instead, we further evaluate M-Attack-V2 against GPT-o3, a model enhanced with visual reasoning capabilities. As shown in Tab. 5, GPT-o3 exhibits slightly better robustness than GPT-4o. However, the limited improvement suggests that its reasoning module is not explicitly trained to detect adversarial manipulations in the image. Thus, even after reasoning, GPT-o3 remains susceptible to M-Attack-V2. The reasoning process is presented in the appendix, where it shows certain degrees of suspect in some images, and further utilize python tools for zooming.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="4.4.">Ablation Study</head><p>Tab. 4 isolates the effect of each module beyond PE + (GPT-4o is omitted due to negligible differences). On both Gemini-2.5-Pro and Claude-3.7-extended, activating MCA or ATA alone delivers ∼5% gains on average, most visi- ble in ASR and KMR b , with consistent improvements on KMR a /KMR c . Additionally, removing PM yields only a minor drop in performance, suggesting it is complementary rather than fundamental. Overall, MCA and ATA constitute the principal mechanisms for variance reduction. At the same time, PM serves as a low-cost memory that extends the effective momentum horizon via a biased gradient, further suppressing variance and adding robustness.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="5.">Conclusion</head><p>In this work, we diagnosed M-Attack's unstable gradients as arising from high variance and overlooked asymmetric matching, and address them with a principled gradientdenoising framework. Multi-Crop Alignment (MCA), Auxiliary Target Alignment (ATA), and Patch Momentum (PM), together with a refined surrogate ensemble (PE + ), form our proposed framework, which achieves state-of-the-art transfer-based black-box attacks on LVLMs. We hope these insights help achieve more stable and transferable adversarial optimization under realistic black-box constraints.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>Impact Statement</head><p>This work strengthens transfer-based black-box attacks on large vision-language models, improving the ability to stress-test real-world multimodal systems used in assistants, search, and content generation. By revealing key instabilities in local-level matching and proposing simple gradientdenoising fixes, our methods can help researchers and practitioners build more reliable defenses, develop better robustness benchmarks, and identify failure modes before deployment. At the same time, more effective attacks can be misused to bypass safety filters, induce targeted hallucinations, or manipulate model outputs in high-stakes settings.</p><p>To mitigate misuse, we have emphasized responsible disclosure, i.e., evaluate primarily on controlled benchmarks and public models, and will make full code/data/models publicly available in a way that supports reproducibility and defense research (e.g., including detection/mitigation baselines and clear guidance on safe use of our optimized generations), while avoiding instructions or configurations that lower the barrier to real-world harm.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>A. Additional Details for Theoretical Analysis</head><p>A.1. Proof for Theorem 1</p><p>This section provides detailed proof of the upper bound in Eq. ( <ref type="formula" target="#formula_5">5</ref>). For variance, we have</p><formula xml:id="formula_17">Var(ĝ K ) := E∥ĝ K -µ∥ 2 = E 1 K K k=1 (g k -µ) 2 = 1 K 2 K k=1 K ℓ=1 E[(g k -µ) ⊤ (g ℓ -µ)] = 1 K 2       K k=1 E∥g k -µ∥ 2 2 Kσ 2 + 2 1≤k&lt;ℓ≤K E[⟨g k -µ, g ℓ -µ⟩] cross terms      <label>(9)</label></formula><p>The diagonal part is reduced to the mean. We now provide an upper bound for the cross terms. Recall</p><formula xml:id="formula_18">p kℓ = ⟨g k -µ,g ℓ -µ⟩ ∥g k -µ∥ 2 ∥g ℓ -µ∥ 2 , we have E[⟨g k -µ, g ℓ -µ⟩] = E [ρ kℓ ∥g k -µ∥ 2 ∥g ℓ -µ∥ 2 ] .<label>(10)</label></formula><p>Since all crops share the same marginal distribution, i.e. E∥g k -µ∥ 2 = E∥g ℓ -µ∥ 2 = σ, applying the Cauchy-Schwarz inequality to Eq. ( <ref type="formula" target="#formula_18">10</ref>) yields</p><formula xml:id="formula_19">E[⟨g k -µ, g ℓ -µ⟩] ≤ E[ρ kℓ ] E∥g k -µ∥ 2 2 E∥g ℓ -µ∥ 2 2 = ρσ 2 , (<label>11</label></formula><formula xml:id="formula_20">)</formula><p>where</p><formula xml:id="formula_21">p is E[p kℓ ], k ̸ = ℓ. Plugging this into the double sum term yields 1≤k&lt;ℓ≤K E [⟨g k -µ, g ℓ -µ⟩] ≤ K(K -1) 2 ρσ 2 . (<label>12</label></formula><formula xml:id="formula_22">)</formula><p>The K(K-1) 2 appears since there are total K(K-1) 2 terms for k&lt;ℓ . Thus substituting Eq. ( <ref type="formula" target="#formula_21">12</ref>) back to the cross item part in the Eq. ( <ref type="formula" target="#formula_17">9</ref>) yields</p><formula xml:id="formula_23">Var(ĝ K ) ≤ 1 K 2 Kσ 2 + K(K -1)pσ 2 = 1 K σ 2 + K -1 K pσ 2<label>(13)</label></formula><p>Therefore, we have the upper bound provided in the Sec. 3.3.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>A.2. Proof of Theorem 2</head><p>We begin with the drift analysis for M-Attack:</p><formula xml:id="formula_24">∆ drift (T ; X tar ) = E T ∼Dα [∥f (T (X tar )) -f (X tar )∥] ≤ L • E T ∼Dα [∥T (X tar ) -X tar ∥] ≤ Lα. (<label>14</label></formula><formula xml:id="formula_25">) g ← g + 1 Km ∇ X adv Lk end end // -Adam update - m ← β 1 m + (1 -β 1 )g v ← β 2 v + (1 -β 2 )g ⊙2 m ← m/(1 -β i 1 ); v ← v/(1 -β i 2 ) X adv ← clip X clean ,ϵ X adv + α m/( √ v + η) end return X adv</formula><p>Next, we analyze the drift for M-Attack-V2 using the triangle inequality and the above assumptions:</p><formula xml:id="formula_26">∆ drift ( T ; X (p) aux ) = E T ∼D α ∥f ( T (X (p) aux )) -f (X tar )∥ ≤ E T ∥f ( T (X (p) aux )) -f (X (p) aux )∥+ ∥f (X (p) aux ) -f (X tar )∥ = E T ∥f ( T (X (p) aux )) -f (X (p) aux )∥ + E ∥f (X (p) aux ) -f (X tar )∥ ≤ L E T ∥ T (X (p) aux ) -X (p) aux ∥ + δ ≤ Lα + δ .</formula><p>Thus, we have completed the proof of Theorem 3.5.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>A.3. Justification for Assumptions</head><p>Assumption 3.3 is derived from the retrieval mechanism for auxiliary data. Specifically, X</p><p>aux represents the p-th closest embedding to the target X tar from a database D, defined explicitly by:</p><formula xml:id="formula_28">X (p) aux ∈ arg top P X ∈ D : f (X) ⊤ f (X tar ) |f (X)||f (X tar )| ,<label>(15)</label></formula><p>where top P denotes selecting the top-P nearest neighbors according to cosine similarity. Given that embeddings f (X) are typically normalized, semantic closeness naturally bounds the expected distance between f (X (p) aux ) and f (X tar ) by δ, thus</p><formula xml:id="formula_29">g ← g + 1 Km ∇ X adv Lk end end // -MI-FGSM update - µ ← γ µ + g ∥g∥1 X adv ← clip X clean ,ϵ X adv + α sign(µ) end return X adv validating Assumption 3.3. In such a case, to estimate δ, use 2 1 -f (X (P ) aux ) ⊤ f (X tar )</formula></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>B. More Details on Our Algorithm</head><p>Alg. 2 and Alg. 3 provide detailed update rule of line 13 in Alg. 1. Fig. <ref type="figure">7</ref> provides a comparison between the entire procedure of M-Attack and our M-Attack-V2 under the local-matching framework. Notably, M-Attack utilizes a radical crop on the target image, risking unrelated or broken semantics for the source image to align. Our ATA anchors more points inside the semantic manifold (blue), and provides a mild transformation to provide a coherence sampling from the target semantic manifold.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>C. More Details of Experimental Setup</head><p>The experiment's seed is 2023. It is conducted on a Linux platform (Ubuntu 22.04) with 6 NVIDIA RTX 4090 GPUs. The temperatures of all LLMs are set to 0. The threshold of the ASR is set to 0.3, following M-Attack. Tab. 9 provides a map from model names in this paper to their identifiers in HuggingFace. We use GPT-5-thinking-low (setting reasoning effort to low in the API) for all results in the main paper, with results on other reasoning budgets presented in the Appx. G.3</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>D. Full Process of Surrogate Model Selection</head><p>This section details the process of selecting our final ensemble, PE + . Exhaustively testing all model combinations is computationally infeasible, so we employ a heuristic-driven approach. We begin by excluding DiNO-large and BLIP2 due to their poor transferability, as shown in Tab. 3. Our initial experiments focus on evaluating the effectiveness of homogeneous ensembles-comprising models with the same patch size-versus mixed patch size ensembles. Specifically, we construct five ensembles: (1) patch-14 CLIP (CLIP-L/14, CLIP † -G/14), (2) patch-14 DiNOv2 (Dino-base, Dino-large), (3) patch-16 CLIP (CLIP-B/16, CLIP † -B/16), and (4) patch-32 CLIP (CLIP-B/32, CLIP † -B/32). Results are presented in Tab. 7. These results reveal that the patch-32 CLIP ensemble performs best on Claude 3.7, while GPT-4o and Gemini 2.5 Pro favor models with patch sizes 14 and 16. This supports the findings in Sec. 4.2: although using a fixed patch size can mitigate architectural bias, it still inherits the intrinsic bias of the patch size itself.</p><p>To address this, we adopt a cross-patch size strategy. Starting from the patch-32 CLIP ensemble, due to its strong performance on Claude and consistent transferability across patch-16 and patch-32 models. We incrementally incorporate one model each from patch sizes 14 and 16. We evaluate various combinations, with results summarized in Tab. 8. The resulting ensemble, PE + , achieves the most balanced performance, ranking first on 7 metrics and a close second on 3 others, across 12 evaluation metrics.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>E. More Ablation Study</head></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>E.1. Ablation Study for Step Size</head><p>This section provides an ablation study for the step size parameter α to view its impact on the performance. Overall, selecting α ∈ [0.5, 1.0] provides better performance for SSA-CWA, M-Attack. Our M-Attack-V2 prefer stepsize at 1.275, since it adopts ADAM as optimizer. </p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>G.4. Cross-Domain Evaluation on Medical and Overhead Imagery</head><p>Beyond the general-domain datasets, we further probe transferability to domains that are notoriously challenging for closed-source VLMs: chest X-rays and overhead remote sensing. Concretely, we augment the NIPS 2017 adversarial competition evaluation with images from ChestMNIST, from MedMNIST <ref type="bibr" target="#b42">(Yang et al., 2021)</ref> and PatternNet <ref type="bibr" target="#b21">(Li et al., 2018)</ref>. We keep the target set unchanged and reuse the same attack budget and optimization hyper-parameters as in the main experiments. These domains are non-photographic and typically elicit generic captions from off-the-shelf VLMs, making them a stringent test of cross-domain transfer.</p><p>We report KMR a /KMR b /KMR c and ASR (higher is better) on GPT-4o, Claude 3.7, and Gemini 2.5 in Tables <ref type="table" target="#tab_4">14</ref> and<ref type="table">18</ref>. Across both datasets, M-Attack-V2 consistently surpasses M-Attack and prior baselines. On PatternNet, M-Attack-V2 improves Claude 3.7 ASR from 0.48 to 0.73 (+0.25) and raises GPT-4o KMR a/b/c to 0.83/0.71/0.24. On ChestMNIST, the gains are even larger on Claude 3.7 (ASR 0.31 → 0.83, +0.52), while M-Attack-V2 also achieves the highest KMR a/b/c on Gemini 2.5 (0.89/0.76/0.33). The only exception is ChestMNIST ASR on Gemini 2.5, where M-Attack is marginally higher (0.96 vs. 0.95), despite M-Attack-V2 yielding stronger keyword-match rates.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>G.5. Robustness to input-preprocessing defenses</head><p>We evaluate two input-preprocessing defenses-JPEG recompression (quality Q=75) and diffusion-based purification (DiffPure) with denoising budgets t=25 and t=75. As summarized in Table <ref type="table">17</ref>, the JPEG results show that M-Attack-V2 remains strong while prior attacks substantially degrade, suggesting resilience to quantization and mild photometric shifts. DiffPure reduces success rates for all methods; however, M-Attack-V2 preserves a clear margin at t=25 and remains the most effective even under the aggressive t=75 setting, where purification approaches image regeneration.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>G.6. Human Perceptual Study</head><p>To evaluate the perceptual stealth of the perturbations beyond static metrics such as the ℓ p norm, we conducted two user studies comparing adversarial samples from M-Attack-V2 and several baseline attacks against clean images.</p><p>M-Attack-V2 against Clean Images. Participants were shown 50 images (25 perturbed by M-Attack-V2 and 25 unmodified) in a random order and asked to label each image as "perturbed" or "clean". Adversarial images were generated with  a perturbation budget ϵ = 16 or ϵ = 8. Results, averaged over 10 distinct user groups, are summarized in Table <ref type="table" target="#tab_5">15</ref>. On average, only 42% of M-Attack-V2 adversarial images are correctly identified as corrupted, meaning that 58% of them pass the human check even under explicit supervision. We further repeat this study at a smaller perturbation budget ϵ = 8, since M-Attack-V2 still exceeds other methods by a large margin even under ϵ = 8. As shown in Table <ref type="table" target="#tab_5">15</ref>, the proportion of adversarial images identified by users drops from 42% to 27.4% when reducing ϵ from 16 to 8, while the confusion between adversarial and real images also increases, and the error of identifying clean images also increases. These results highlight the potential threat of M-Attack-V2 in real-world scenarios where human inspection is relied upon.</p><p>Comparison across Attack Methods. In a second study, each participant (10 in total) was shown 40 images: 10 adversarial examples from each of AnyAttack, SSA-CWA, M-Attack-V1, and M-Attack-V2 (again at ϵ = 16). Participants were told that exactly half of the images were corrupted and asked to select the 20 images they believed were mostly perturbed. This protocol directly compares the perceptual stealthiness of different attacks. As reported in Table <ref type="table">16</ref>, AnyAttack is the most easily detected method, with 84% of its images identified as perturbed. SSA-CWA is somewhat less detectable (54%), while M-Attack-V1 and M-Attack-V2 are flagged as perturbed only about 30% of the time, indicating substantially higher perceptual stealth. Notably, this M-Attack and M-Attack-V2 share a similar portion, showing that the slight differences in perturbations' ℓ p norm do not necessarily translate to the final human imperceptibility.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>H. Computational Cost and Runtime Analysis</head><p>This section analyzes the computational cost of M-Attack and related baselines, first in terms of FLOPs and then in terms of wall-clock runtime. Since the backward pass is empirically about twice as expensive as the forward pass, a complete forward-backward iteration for a single VLM requires approximately 3M FLOPs. • SSA-CWA adds an inner sampling loop of K steps for sharpness-aware minimization (SAM), lifting the complexity to 3ρ N KM .</p><p>• M-Attack-V2 evaluates K local crops and, for each crop, forwards P auxiliary examples to reduce the variance of M-Attack. This gives a complexity ofρ N K 3M + P M = ρ N K(3 + P )M, where P is typically a small integer (e.g., P = 2).</p><p>In practice, GPUs parallelize many of these operations, so wall-clock time per image does not scale linearly with FLOPs. On a single NVIDIA RTX 4090 GPU, we measure the average time per attacked image (while running a batched optimization with 32 images at the same time) as follows:</p><p>• SSA-CWA: 545.80 ± 4.21 s per image;</p><p>• M-Attack-V1: 22.04 ± 0.11 s per image;</p><p>• M-Attack-V2 (with K = 2, P = 2): 24.13 ± 0.84 s per image.</p><p>Thus, with K = 2, P = 2, M-Attack increases the runtime of M-Attack-V1 by only 9.4%, while yielding substantial gains in attack quality: on Claude 3.7, we observe improvements of +20%, +17%, +3%, and +13% on KMR a , KMR b , KMR c , and ASR, respectively; on GPT-4o, the corresponding gains are +8%, +3%, +1%, and +6%. More results are presented in the Appx. F.1. Therefore, our M-Attack-V2 offers a configurable option between efficient yet effective and highly effective attack (as presented in the main paper).</p><p>We omit AttackVLM and AnyAttack from the empirical runtime comparison: AttackVLM reports relatively low attack performance, while AnyAttack devotes most of its computational budget to its novel pre-training stage, making its overall cost not directly comparable to inference-time attacks like ours. On the ϵ = 16 setting, the visual effect is still very close between M-Attack and M-Attack-V2. Since our M-Attack-V2 also greatly improves the results under ϵ = 8, future directions might be improving the imperceptibility by adding constraints besides the ℓ ∞ . We also provide all 100 images in the supplementary material for further reference. </p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>I. Additional Visualization</head></div><figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_0"><head></head><label></label><figDesc>Gradient cosine similarity between two crops drops quickly with IoU and falls below 0.1 when IoU &lt; 0.8, despite shared pixels. Cosine similarity between consecutive source gradients (∇ xs i , ∇ xs i+1 ) across iterations.Figure 2. Cosine similarity of gradients from random crops. (a) Similarity vs. IoU between two crops in a fixed iteration, showing rapid decay and values &lt; 0.1 once IoU &lt; 0.8. (b) Similarity between consecutive source gradients. V1's gradient similarity is almost zero, while v2 improves it to around 0.2. Results are averaged over 200 runs.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_1"><head></head><label></label><figDesc>Comparison of optimization trajectories with different K, K = 1 refers to single crop alignment. Gradient pattern between different crop strategies in M-Attack and M-Attack-V2.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_2"><head>Figure 3 .</head><label>3</label><figDesc>Figure 3. Comparison of: a) different trajectories against different K; b) gradient pattern of single crop alignment against multi-crop alignment (MCA). The gradient pattern of ResNet 50 remains consistent when large pixels are overlapped, while the gradient pattern of ViTs changes dramatically. MCA helps to smooth out this impact.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_3"><head>Figure 4 .</head><label>4</label><figDesc>Figure 4. Visualization of adversarial samples under ϵ = 8.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_4"><head></head><label></label><figDesc>p) aux )), p = 1, . . . , P 8 Compute Lk = (f ϕj (T k (X sou )), y 0 ) + λ P P p=1 L(f ϕj (T k (x)), ỹp ) g ← g + 1 Km ∇ Xsou Lk end end Update X adv based on g with Patch Momentum end return X adv human-annotated keywords, considering a match successful if the rate exceeds threshold x. The evaluation follows M-Attack exactly.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_5"><head></head><label></label><figDesc>Clean images are drawn from the NIPS 2017 Adversarial Attacks and Defenses Competition dataset(Kurakin et al., 2018a). Following SSA-CWA(Dong et al., 2023b)  and M-Attack<ref type="bibr" target="#b24">(Li et al., 2025)</ref>, we randomly sample 100 images, retrieving auxiliary sets from the COCO training set<ref type="bibr" target="#b25">(Lin et al., 2014)</ref> using CLIP-B/16 embedding similarity. Further results on a 1k-image subset are in the appendix, along with Hug-gingFace model identifiers. All the BLIP2<ref type="bibr" target="#b23">(Li et al., 2023)</ref> variants on Huggingface share the same vision encoder. Therefore, we use only one. The milder target transformation includes random resized crop ([0.9, 1.0]), random horizontal flip (p = 0.5), and random rotation (±15 • ).</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_6"><head>Figure 5 .</head><label>5</label><figDesc>Figure 5. Comparison of two types of attention maps. Left: attention map that sparsely separates into different regions; right: attention map that focuses on the main object.</figDesc><graphic coords="7,335.97,286.11,61.42,61.42" type="bitmap" /></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_7"><head>Figure 6 .</head><label>6</label><figDesc>Figure 6. Comparison under different step budgets.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_8"><head>Figure 7 .Figure 8 .</head><label>78</label><figDesc>Figure 7. Comparison of one step between M-Attack and M-Attack-V2.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_9"><head>Figure 10 .</head><label>10</label><figDesc>Figure 10. ASR and KMRa/KMR b vs. different K and λ.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_10"><head></head><label></label><figDesc>Effect of momentum parameter β.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_11"><head>Figure 11 .</head><label>11</label><figDesc>Figure 11. Ablation study on auxiliary set size P and momentum parameter β.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_12"><head></head><label></label><figDesc>Let d denote the hidden dimension, d ff = 4d the feed-forward expansion, and N the sequence length. In one Transformer layer, the feed-forward network (FFN) incurs 2N d d ff = 8N d 2 FLOPs, while multi-head attention adds 4N d 2 + 4N 2 d, giving a per-layer forward cost M ≜ 12N d 2 + 4N 2 d.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_13"><head>I. 1 .</head><label>1</label><figDesc>Fig.4and Fig.8visualize adversarial samples of different black-box attack algorithms under different perturbation constraints. Under ϵ = 8, no significant difference exists between M-Attack and M-Attack-V2. On the ϵ = 16 setting, the visual effect is still very close between M-Attack and M-Attack-V2. Since our M-Attack-V2 also greatly improves the results under ϵ = 8, future directions might be improving the imperceptibility by adding constraints besides the ℓ ∞ . We also provide all 100 images in the supplementary material for further reference.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_14"><head>Figure 12 .</head><label>12</label><figDesc>Figure 12. Visualization of GPT-o3's response towards M-Attack-V2 adversarial samples. The underlined 'glitchy' denotes that O3 notices something unusual.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" type="table" xml:id="tab_0"><head>Table 2 .</head><label>2</label><figDesc>Comparison on open-source LVLMs (Qwen-2.5-VL and LLaVA-1.5). Higher KMR a/b/c and ASR are better.</figDesc><table><row><cell>Method</cell><cell></cell><cell>Qwen-2.5-VL</cell><cell>LLaVA-1.5</cell></row><row><cell></cell><cell cols="3">KMRa KMRb KMRc ASR KMRa KMRb KMRc ASR</cell></row><row><cell cols="2">AttackVLM 0.12</cell><cell>0.04 0.00 0.01 0.11</cell><cell>0.03 0.00 0.07</cell></row><row><cell>SSA-CWA</cell><cell>0.36</cell><cell>0.25 0.04 0.38 0.29</cell><cell>0.17 0.04 0.34</cell></row><row><cell>AnyAttack</cell><cell>0.53</cell><cell>0.28 0.09 0.53 0.60</cell><cell>0.32 0.07 0.58</cell></row><row><cell cols="2">FOA-Attack 0.83</cell><cell>0.61 0.20 0.91 0.94</cell><cell>0.75 0.29 0.95</cell></row><row><cell>M-Attack</cell><cell>0.80</cell><cell>0.65 0.17 0.90 0.85</cell><cell>0.59 0.20 0.95</cell></row><row><cell cols="2">M-Attack-V2 0.87</cell><cell>0.67 0.27 0.95 0.96</cell><cell>0.83 0.29 0.96</cell></row></table></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" type="table" xml:id="tab_1"><head>Table 3 .</head><label>3</label><figDesc>Comparison of embedding transferability over 1k images. MCA/ATA excluded to show standalone performance. C/D = CLIP/DinoV2. Gray denotes selected models.</figDesc><table><row><cell cols="15">Surrogate C-L/14 C  † -L/14 D-S/14 D-B/14 D-L/14 C-B/16 C  † -B/16 C-B/32 C  † -B/32 BLIP2 Avg/14 Avg/16 Avg/32 Avg/All</cell></row><row><cell>C-L/14</cell><cell>N/A</cell><cell>0.40</cell><cell>0.10</cell><cell>0.13</cell><cell>0.12</cell><cell>0.45</cell><cell>0.40</cell><cell>0.34</cell><cell>0.24</cell><cell>0.48</cell><cell>0.25</cell><cell>0.42</cell><cell>0.29</cell><cell>0.30</cell></row><row><cell>C  † -L/14</cell><cell>0.44</cell><cell>N/A</cell><cell>0.24</cell><cell>0.24</cell><cell>0.21</cell><cell>0.55</cell><cell>0.57</cell><cell>0.37</cell><cell>0.33</cell><cell>0.61</cell><cell>0.35</cell><cell>0.56</cell><cell>0.35</cell><cell>0.39</cell></row><row><cell>D-S/14</cell><cell>0.25</cell><cell>0.39</cell><cell>N/A</cell><cell>0.45</cell><cell>0.38</cell><cell>0.41</cell><cell>0.45</cell><cell>0.32</cell><cell>0.25</cell><cell>0.46</cell><cell>0.39</cell><cell>0.43</cell><cell>0.28</cell><cell>0.37</cell></row><row><cell>D-B/14</cell><cell>0.29</cell><cell>0.36</cell><cell>0.33</cell><cell>N/A</cell><cell>0.51</cell><cell>0.37</cell><cell>0.39</cell><cell>0.31</cell><cell>0.23</cell><cell>0.47</cell><cell>0.39</cell><cell>0.38</cell><cell>0.27</cell><cell>0.36</cell></row><row><cell>D-L/14</cell><cell>0.26</cell><cell>0.31</cell><cell>0.12</cell><cell>0.32</cell><cell>N/A</cell><cell>0.31</cell><cell>0.34</cell><cell>0.30</cell><cell>0.21</cell><cell>0.42</cell><cell>0.29</cell><cell>0.33</cell><cell>0.26</cell><cell>0.29</cell></row><row><cell>C-B/16</cell><cell>0.44</cell><cell>0.43</cell><cell>0.21</cell><cell>0.18</cell><cell>0.13</cell><cell>N/A</cell><cell>0.53</cell><cell>0.37</cell><cell>0.27</cell><cell>0.51</cell><cell>0.32</cell><cell>0.53</cell><cell>0.32</cell><cell>0.34</cell></row><row><cell>C  † -B/16</cell><cell>0.43</cell><cell>0.51</cell><cell>0.22</cell><cell>0.21</cell><cell>0.15</cell><cell>0.57</cell><cell>N/A</cell><cell>0.39</cell><cell>0.34</cell><cell>0.52</cell><cell>0.34</cell><cell>0.57</cell><cell>0.36</cell><cell>0.37</cell></row><row><cell>C-B/32</cell><cell>0.37</cell><cell>0.43</cell><cell>0.21</cell><cell>0.11</cell><cell>0.09</cell><cell>0.55</cell><cell>0.53</cell><cell>N/A</cell><cell>0.49</cell><cell>0.46</cell><cell>0.28</cell><cell>0.54</cell><cell>0.49</cell><cell>0.36</cell></row><row><cell>C  † -B/32</cell><cell>0.31</cell><cell>0.49</cell><cell>0.27</cell><cell>0.18</cell><cell>0.12</cell><cell>0.53</cell><cell>0.61</cell><cell>0.58</cell><cell>N/A</cell><cell>0.50</cell><cell>0.31</cell><cell>0.57</cell><cell>0.58</cell><cell>0.40</cell></row><row><cell>BLIP2</cell><cell>0.39</cell><cell>0.43</cell><cell>0.15</cell><cell>0.20</cell><cell>0.26</cell><cell>0.45</cell><cell>0.43</cell><cell>0.33</cell><cell>0.25</cell><cell>N/A</cell><cell>0.29</cell><cell>0.44</cell><cell>0.29</cell><cell>0.32</cell></row></table></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" type="table" xml:id="tab_2"><head>Table 4 .</head><label>4</label><figDesc>Effect of removing each component. Numbers below each value denote the change relative to the full model (first row). ✗ marks the component(s) disabled.</figDesc><table><row><cell cols="2">Component</cell><cell></cell><cell cols="2">Gemini 2.5-Pro</cell><cell></cell><cell cols="4">Claude 3.7-extended</cell></row><row><cell cols="10">MCA ATA PM KMRa KMRb KMRc ASR KMRa KMRb KMRc ASR</cell></row><row><cell></cell><cell></cell><cell>0.87</cell><cell>0.72</cell><cell>0.22</cell><cell>0.97</cell><cell>0.56</cell><cell>0.32</cell><cell>0.11</cell><cell>0.67</cell></row><row><cell>✗</cell><cell></cell><cell>0.85 ↓ 0.02</cell><cell>0.70 ↓ 0.02</cell><cell>0.21 ↓ 0.01</cell><cell>0.92 ↓ 0.05</cell><cell>0.52 ↓ 0.04</cell><cell>0.35 ↑ 0.03</cell><cell>0.08 ↓ 0.03</cell><cell>0.66 ↓ 0.01</cell></row><row><cell></cell><cell>✗</cell><cell>0.85 ↓ 0.02</cell><cell>0.68 ↓ 0.04</cell><cell>0.21 ↓ 0.01</cell><cell>0.93 ↓ 0.04</cell><cell>0.55 ↓ 0.01</cell><cell>0.22 ↓ 0.10</cell><cell>0.10 ↓ 0.01</cell><cell>0.62 ↓ 0.05</cell></row><row><cell>✗</cell><cell>✗</cell><cell>0.82 ↓ 0.05</cell><cell>0.62 ↓ 0.10</cell><cell>0.22 -</cell><cell>0.93 ↓ 0.04</cell><cell>0.44 ↓ 0.12</cell><cell>0.31 ↓ 0.01</cell><cell>0.08 ↓ 0.03</cell><cell>0.62 ↓ 0.05</cell></row><row><cell></cell><cell>✗</cell><cell>0.82 ↓ 0.05</cell><cell>0.71 ↓ 0.01</cell><cell>0.21 ↓ 0.01</cell><cell>0.96 ↓ 0.01</cell><cell>0.52 ↓ 0.04</cell><cell>0.32 ↓ 0.00</cell><cell>0.10 ↓ 0.01</cell><cell>0.66 ↓ 0.01</cell></row></table></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" type="table" xml:id="tab_3"><head>Table 5 .</head><label>5</label><figDesc>Results of M-Attack-V2 on the vision reasoning model.</figDesc><table><row><cell>Model</cell><cell cols="4">KMRa KMRb KMRc ASR</cell></row><row><cell cols="2">GPT-o3 (o3-2025-04-16) 0.91</cell><cell>0.71</cell><cell>0.23</cell><cell>0.98</cell></row><row><cell cols="5">200 steps, suggesting slower convergence. At fewer steps</cell></row><row><cell cols="5">(100 and 200), M-Attack exhibits a notable performance</cell></row><row><cell cols="5">drop. Meanwhile, our method maintains stable ASR and</cell></row><row><cell>KMR</cell><cell></cell><cell></cell><cell></cell></row></table><note><p>b due to a more coherent optimization trajectory than M-Attack, which is more sensitive to random cropping and aggressive target transformations. Additional results on varing ϵ is presented in the appendix.</p></note></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" type="table" xml:id="tab_4"><head>Table 14 .</head><label>14</label><figDesc>Cross-domain results on PatternNet<ref type="bibr" target="#b21">(Li et al., 2018)</ref>. We report KMRa/KMR b /KMRc and ASR (higher is better). Bold = best in column; underline = second best. The shaded row is our method.KMR a KMR b KMR c ASR KMR a KMR b KMR c ASR KMR a KMR b KMR c ASRAttackVLM 0.06 0.01 0.00 0.02 0.06 0.02 0.00 0.00 0.09 0.04 0.00 0.03 SSA-CWA 0.05 0.02 0.00 0.13 0.04 0.03 0.00 0.07 0.08 0.02 0.01 0.15 AnyAttack 0.06 0.03 0.00 0.05 0.03 0.01 0.00 0.05 0.06 0.02 0.00 0.05 M-Attack 0.79 0.66 0.21 0.93 0.33 0.17 0.04 0.48 0.86 0.71 0.23 0.91 M-Attack-V2 0.83 0.71 0.24 0.93 0.58 0.40 0.09 0.73 0.88 0.68 0.22 0.97</figDesc><table><row><cell>Method</cell><cell>GPT-4o</cell><cell>Claude 3.7</cell><cell>Gemini 2.5</cell></row></table></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" type="table" xml:id="tab_5"><head>Table 15 .</head><label>15</label><figDesc>Human study on the imperceptibility of M-Attack-V2 under different perturbation budgets. We report the proportion (%) of images identified by users; results are averaged over 10 user groups (mean ± std).</figDesc><table><row><cell>Proportion</cell><cell cols="2">ϵ = 16, Mean ± Std ϵ = 8, Mean ± Std</cell></row><row><cell>Adversarial images correctly identified</cell><cell>42 ± 1.7</cell><cell>27.4 ± 1.6</cell></row><row><cell>Original images correctly identified</cell><cell>98 ± 1.6</cell><cell>93.1 ± 2.3</cell></row></table></figure>
+		</body>
+		<back>
+			<div type="annex">
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>Appendix</head></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>G Additional Results</head></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>G.1 Additional</head><p>Algorithm 3: M-Attack-V2 (MI-FGSM variant)</p><p>Input :clean image X clean ; primary target Xtar; auxiliary set A = {X (p) aux} P p=1 ; patch ensemble + Φ + = {ϕj} m j=1 ; iterations n, step size α, perturbation budget ϵ; momentum decay γ; number of crops K, auxiliary weight λ Output :adversarial image X adv</p><p>Pushing the Frontier of Black-Box LVLM Attacks via Fine-Grained Detail Targeting  In failure cases, the adversarial perturbations show weaker semantic correlation with the target label, whereas in successful cases, rough shapes of the target (such as trees or animals) can be clearly identified. We also observe that shared successful target images tend to appear neater and more centralized.  Pushing the Frontier of Black-Box LVLM Attacks via Fine-Grained Detail Targeting Table <ref type="table">9</ref>. Surrogate models and their corresponding HuggingFace identifier in our main paper.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>Surrogate (paper notation) Implementation (HuggingFace identifier)</head><p>CLIP † -B/32 <ref type="bibr" target="#b14">(Ilharco et al., 2021;</ref><ref type="bibr" target="#b37">Schuhmann et al., 2022)</ref> laion/CLIP-ViT-B-32-laion2B-s34B-b79K CLIP † -H/14 <ref type="bibr" target="#b14">(Ilharco et al., 2021;</ref><ref type="bibr" target="#b37">Schuhmann et al., 2022)</ref> laion/CLIP-ViT-H-14-laion2B-s32B-b79K CLIP-L/14 <ref type="bibr" target="#b35">(Radford et al., 2021)</ref> openai/clip-vit-large-patch14 CLIP † -B/16 <ref type="bibr" target="#b14">(Ilharco et al., 2021;</ref><ref type="bibr" target="#b37">Schuhmann et al., 2022)</ref> laion/CLIP-ViT-B-16-laion2B-s34B-b88K CLIP † -BG/14 <ref type="bibr" target="#b14">(Ilharco et al., 2021;</ref><ref type="bibr" target="#b37">Schuhmann et al., 2022)</ref> laion/CLIP-ViT-bigG-14-laion2B-39B-b160k</p><p>Dino-Small <ref type="bibr" target="#b33">(Oquab et al., 2023)</ref> facebook/dinov2-small Dino-Base <ref type="bibr" target="#b33">(Oquab et al., 2023)</ref> facebook/dinov2-base Dino-Large <ref type="bibr" target="#b33">(Oquab et al., 2023)</ref> facebook/dinov2-large </p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>G. Additional Results</head></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>G.1. Additional Results on 1K image</head><p>We compare M-Attack and M-Attack-V2 across 1K images to improve statistical stability. We changed the threshold to multiple values since no additional keywords were added to the 900 images, thereby replacing the KMR with ASR at different matching levels. Our M-Attack-V2 consistently outperforms M-Attack, demonstrating the superiority of our proposed strategy.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>G.2. Additional Results on FGSM framework</head><p>We provide the results of the I-FGSM <ref type="bibr">(Kurakin et al., 2018b)</ref> and MI-FGSM <ref type="bibr" target="#b7">(Dong et al., 2018)</ref> under our M-Attack framework as complementary, presented in Tab. 12. Results show that even under the FGSM framework, where the patchy gradient matter is smoothed by assigning sign(∇L), M-Attack-V2 still benefit from momentum. Moreover, MI-FGSM still provides results comparable to those of the ADAM version. However, using PGD framework with ADAM optimizer is generally the better choice to unleash the potential of black-box attack fully since it can better explore in the space while also reducing scale issue with second-order momentum.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>G.3. Additional Results on Other GPT-5 Reasoning Modes</head><p>GPT-5 provides four reasoning modes: minimum, low, medium, and high. While the main paper presents results using GPT-5-thinking-low, additional experiments on other reasoning modes are summarized in Tab. 13. Our proposed M-Attack-V2 consistently achieves superior performance across all modes. Interestingly, providing additional thinking budget generally enhances model robustness, evidenced by a reduction in ASR and KMR. However, this improvement is not strictly monotonic: ASR first decreases from 100% (low) to 96% (medium) before slightly rebounding to 99% (high). A similar non-monotonic trend can also be observed elsewhere in the table.</p><p>Pushing the Frontier of Black-Box LVLM Attacks via Fine-Grained Detail Targeting • AttackVLM costs 3M FLOPs per iteration.</p><p>• M-Attack-V1 costs 3ρ N M FLOPs per iteration.</p><p>Pushing the Frontier of Black-Box LVLM Attacks via Fine-Grained Detail Targeting AttackVLM 0.08 0.05 0.00 0.02 0.04 0.02 0.00 0.00 0.04 0.01 0.00 0.01 SSA-CWA 0.05 0.03 0.01 0.06 0.05 0.03 0.00 0.03 0.07 0.02 0.00 0.05 AnyAttack 0.05 0.00 0.00 0.06 0.04 0.02 0.00 0.03 0.04 0.02 0.00 0.07 M-Attack 0.10 0.02 0.00 0.04 0.03 0.02 0.00 0.02 0.05 0.05 0.00 0.05 M-Attack-V2 0.13 0.06 0.01 0.07 0.07 0.02 0.00 0.06 0.12 0.06 0.01 0.08 Table <ref type="table">18</ref>. Cross-domain results on ChestMNIST, from MedMNIST <ref type="bibr" target="#b42">(Yang et al., 2021)</ref>. We report KMRa/KMR b /KMRc and ASR (higher is better). Bold = best in column; underline = second best. The shaded row is our method.  <ref type="formula">c</ref>)), and zoom-in reasoning (response (a)). Notably, in response (a), GPT-o3 already identifies the central area as uncertain and zooms in on it. However, its reasoning mechanism is not well-equipped to handle adversarial perturbations, resulting in a response that remains semantically close to the target image despite the perturbation. This observation suggests that vision reasoning offers a degree of robustness by detecting uncertainty and taking subsequent actions. During training, incorporating explicit behaviors, such as refusing to answer or flagging potential adversarial inputs, could further enhance the utility of vision-based inference under adversarial conditions.</p></div>			</div>
+			<div type="references">
+
+				<listBibl>
+
+<biblStruct xml:id="b0">
+	<analytic>
+		<title level="a" type="main">Flamingo: a visual language model for few-shot learning</title>
+		<author>
+			<persName><forename type="first">J.-B</forename><surname>Alayrac</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Donahue</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Luc</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Miech</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">I</forename><surname>Barr</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Hasson</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Lenc</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Mensch</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Millican</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Reynolds</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">International Conference on Advanced Neural Information Processing Systems</title>
+		<imprint>
+			<date type="published" when="2022">2022</date>
+			<biblScope unit="page" from="23716" to="23736" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b1">
+	<analytic>
+		<title/>
+	</analytic>
+	<monogr>
+		<title level="j">Anthropic. Introducing Claude</title>
+		<imprint>
+			<biblScope unit="volume">3</biblScope>
+			<biblScope unit="issue">5</biblScope>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b2">
+	<monogr>
+		<ptr target="https://www.anthropic.com/news/claude-3-5-sonnet" />
+		<title level="m">Sonnet. Anthropic Blog</title>
+		<imprint>
+			<date type="published" when="2024">2024. 2025-02-22</date>
+			<biblScope unit="volume">3</biblScope>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b3">
+	<analytic>
+		<title level="a" type="main">Anthropic Blog</title>
+		<ptr target="https://www.anthropic.com/news/claude-3-7-sonnet" />
+	</analytic>
+	<monogr>
+		<title level="m">Sonnet and Claude Code</title>
+		<imprint>
+			<date type="published" when="2025-02-22">2025. 2025-02-22</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b4">
+	<analytic>
+		<title level="a" type="main">Bootstrap generalization ability from loss landscape perspective</title>
+		<author>
+			<persName><forename type="first">H</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Shao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Shang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Ji</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Wu</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">European Conference on Computer Vision</title>
+		<imprint>
+			<date type="published" when="2022">2022</date>
+			<biblScope unit="page" from="500" to="517" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b5">
+	<analytic>
+		<title level="a" type="main">Rethinking model ensemble in transfer-based adversarial attacks</title>
+		<author>
+			<persName><forename type="first">H</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Dong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Yang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Su</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Zhu</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">International Conference on Learning Representations</title>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b6">
+	<analytic>
+		<title level="a" type="main">Data-efficient adaptation of pretrained language models for image captioning</title>
+		<author>
+			<persName><forename type="first">J</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Guo</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Yi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Elhoseiny</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">IEEE/CVF Computer Vision and Pattern Recognition Conference</title>
+		<imprint>
+			<date type="published" when="2022">2022</date>
+			<biblScope unit="page" from="18030" to="18040" />
+		</imprint>
+	</monogr>
+	<note>Visualgpt</note>
+</biblStruct>
+
+<biblStruct xml:id="b7">
+	<analytic>
+		<title level="a" type="main">Boosting adversarial attacks with momentum</title>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Dong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">F</forename><surname>Liao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Pang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Su</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Zhu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Hu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Li</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">IEEE/CVF Computer Vision and Pattern Recognition Conference</title>
+		<imprint>
+			<date type="published" when="2018">2018</date>
+			<biblScope unit="page" from="9185" to="9193" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b8">
+	<analytic>
+		<title level="a" type="main">Query-efficient black-box adversarial attacks guided by a transfer-based prior</title>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Dong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Cheng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Pang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Su</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Zhu</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">IEEE Transactions on Pattern Analysis and Machine Intelligence</title>
+		<imprint>
+			<biblScope unit="volume">44</biblScope>
+			<biblScope unit="issue">12</biblScope>
+			<biblScope unit="page" from="9536" to="9548" />
+			<date type="published" when="2021">2021</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b9">
+	<monogr>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Dong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Fang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Yang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Tian</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Su</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Zhu</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2309.11751</idno>
+		<title level="m">How robust is google&apos;s bard to adversarial image attacks?</title>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b10">
+	<monogr>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Dong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Fang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Yang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Tian</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Su</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Zhu</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2309.11751</idno>
+		<title level="m">How robust is google&apos;s bard to adversarial image attacks?</title>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b11">
+	<analytic>
+		<title level="a" type="main">Sharpness-aware minimization for efficiently improving generalization</title>
+		<author>
+			<persName><forename type="first">P</forename><surname>Foret</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Kleiner</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Mobahi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Neyshabur</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">International Conference on Learning Representations</title>
+		<imprint>
+			<date type="published" when="2021">2021</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b12">
+	<analytic>
+		<title level="a" type="main">Efficient generation of targeted and transferable adversarial examples for vision-language models via diffusion models</title>
+		<author>
+			<persName><forename type="first">Q</forename><surname>Guo</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Pang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Jia</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Q</forename><surname>Guo</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">IEEE Transactions on Information Forensics and Security</title>
+		<imprint>
+			<biblScope unit="volume">20</biblScope>
+			<biblScope unit="page" from="1333" to="1348" />
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b13">
+	<analytic>
+		<title level="a" type="main">Scaling up vision-language pre-training for image captioning</title>
+		<author>
+			<persName><forename type="first">X</forename><surname>Hu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Gan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Yang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Lu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Wang</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">IEEE/CVF Computer Vision and Pattern Recognition Conference</title>
+		<imprint>
+			<date type="published" when="2022">2022</date>
+			<biblScope unit="page" from="17980" to="17989" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b14">
+	<monogr>
+		<title/>
+		<author>
+			<persName><forename type="first">G</forename><surname>Ilharco</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Wortsman</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Wightman</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Gordon</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">N</forename><surname>Carlini</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Taori</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Dave</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">V</forename><surname>Shankar</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Namkoong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Miller</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Hajishirzi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Farhadi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Schmidt</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Openclip</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Zenodo</surname></persName>
+		</author>
+		<idno type="DOI">10.5281/zenodo.5143773</idno>
+		<ptr target="https://doi.org/10.5281/zenodo.5143773" />
+		<imprint>
+			<date type="published" when="2021-07">July 2021</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b15">
+	<analytic>
+		<title level="a" type="main">Black-box adversarial attacks with limited queries and information</title>
+		<author>
+			<persName><forename type="first">A</forename><surname>Ilyas</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Engstrom</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Athalye</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Lin</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">International Conference on Machine Learning</title>
+		<imprint>
+			<date type="published" when="2018">2018</date>
+			<biblScope unit="page" from="2137" to="2146" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b16">
+	<monogr>
+		<author>
+			<persName><forename type="first">X</forename><surname>Jia</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Gao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Qin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Pang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Du</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Huang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Liu</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2505.21494</idno>
+		<title level="m">Adversarial attacks against closed-source mllms via feature optimal alignment</title>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b17">
+	<monogr>
+		<title level="m" type="main">A method for stochastic optimization</title>
+		<author>
+			<persName><forename type="first">D</forename><forename type="middle">P</forename><surname>Kingma</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Adam</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:1412.6980</idno>
+		<imprint>
+			<date type="published" when="2014">2014</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b18">
+	<analytic>
+		<title level="a" type="main">Adversarial attacks and defences competition</title>
+		<author>
+			<persName><forename type="first">A</forename><surname>Kurakin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">I</forename><surname>Goodfellow</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Bengio</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Dong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">F</forename><surname>Liao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Liang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Pang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Zhu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Hu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Xie</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">The NIPS&apos;17 Competition: Building Intelligent Systems</title>
+		<imprint>
+			<publisher>Springer</publisher>
+			<date type="published" when="2018">2018</date>
+			<biblScope unit="page" from="195" to="231" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b19">
+	<analytic>
+		<title level="a" type="main">Adversarial examples in the physical world</title>
+		<author>
+			<persName><forename type="first">A</forename><surname>Kurakin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">I</forename><forename type="middle">J</forename><surname>Goodfellow</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Bengio</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Artificial intelligence safety and security</title>
+		<imprint>
+			<biblScope unit="page" from="99" to="112" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b20">
+	<monogr>
+		<title/>
+		<author>
+			<persName><forename type="first">Hall</forename><surname>Chapman</surname></persName>
+		</author>
+		<imprint>
+			<date type="published" when="2018">2018b</date>
+			<publisher>CRC</publisher>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b21">
+	<analytic>
+		<title level="a" type="main">Visual pattern mining with deep neural network</title>
+		<author>
+			<persName><forename type="first">H</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><forename type="middle">G</forename><surname>Ellis</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S.-F</forename><surname>Chang</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Patternnet</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of the 2018 ACM on international conference on multimedia retrieval</title>
+		<meeting>the 2018 ACM on international conference on multimedia retrieval</meeting>
+		<imprint>
+			<date type="published" when="2018">2018</date>
+			<biblScope unit="page" from="291" to="299" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b22">
+	<analytic>
+		<title level="a" type="main">Blip: Bootstrapping language-image pre-training for unified vision-language understanding and generation</title>
+		<author>
+			<persName><forename type="first">J</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Xiong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Hoi</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">International Conference on Machine Learning</title>
+		<imprint>
+			<date type="published" when="2022">2022</date>
+			<biblScope unit="page" from="12888" to="12900" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b23">
+	<analytic>
+		<title level="a" type="main">Blip-2: Bootstrapping language-image pre-training with frozen image encoders and large language models</title>
+		<author>
+			<persName><forename type="first">J</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Savarese</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Hoi</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">International conference on machine learning</title>
+		<imprint>
+			<publisher>PMLR</publisher>
+			<date type="published" when="2023">2023</date>
+			<biblScope unit="page" from="19730" to="19742" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b24">
+	<monogr>
+		<title level="m" type="main">A frustratingly simple yet highly effective attack baseline: Over 90% success rate against the strong black-box models of gpt-4</title>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Zhao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D.-D</forename><surname>Wu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Cui</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Shen</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2503.10635</idno>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b25">
+	<analytic>
+		<title level="a" type="main">Microsoft coco: Common objects in context</title>
+		<author>
+			<persName><forename type="first">T.-Y</forename><surname>Lin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Maire</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Belongie</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Hays</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Perona</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Ramanan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Dollár</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><forename type="middle">L</forename><surname>Zitnick</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">European conference on computer vision</title>
+		<imprint>
+			<publisher>Springer</publisher>
+			<date type="published" when="2014">2014</date>
+			<biblScope unit="page" from="740" to="755" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b26">
+	<analytic>
+		<title level="a" type="main">Visual instruction tuning</title>
+		<author>
+			<persName><forename type="first">H</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Q</forename><surname>Wu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><forename type="middle">J</forename><surname>Lee</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">International Conference on Advanced Neural Information Processing Systems</title>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+			<biblScope unit="page" from="34892" to="34916" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b27">
+	<analytic>
+		<title level="a" type="main">Delving into transferable adversarial examples and black-box attacks</title>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Song</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">International Conference on Learning Representations</title>
+		<imprint>
+			<date type="published" when="2017">2017</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b28">
+	<analytic>
+		<title level="a" type="main">Frequency domain model augmentation for adversarial attack</title>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Long</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Q</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Zeng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Gao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Song</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">European Conference on Computer Vision</title>
+		<imprint>
+			<date type="published" when="2022">2022</date>
+			<biblScope unit="page" from="549" to="566" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b29">
+	<analytic>
+		<title level="a" type="main">Questioning, answering, and captioning for zero-shot detailed image caption</title>
+		<author>
+			<persName><forename type="first">D.-T</forename><surname>Luu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">V.-T</forename><surname>Le</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><forename type="middle">M</forename><surname>Vo</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Asian Conference on Computer Vision</title>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+			<biblScope unit="page" from="242" to="259" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b30">
+	<analytic>
+		<title level="a" type="main">Can vision-language foundation models reason compositionally</title>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Ma</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Hong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><forename type="middle">O</forename><surname>Gul</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Gandhi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">I</forename><surname>Gao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Krishna</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Crepe</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">IEEE/CVF Computer Vision and Pattern Recognition Conference</title>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+			<biblScope unit="page" from="10910" to="10921" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b31">
+	<analytic>
+		<title level="a" type="main">Towards deep learning models resistant to adversarial attacks</title>
+		<author>
+			<persName><forename type="first">A</forename><surname>Madry</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Makelov</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Schmidt</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Tsipras</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Vladu</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">International Conference on Learning Representations</title>
+		<imprint>
+			<date type="published" when="2018">2018</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b32">
+	<monogr>
+		<title level="m" type="main">Introducing o3 and o4-mini. OpenAI Blog</title>
+		<author>
+			<persName><surname>Openai</surname></persName>
+		</author>
+		<ptr target="https://openai.com/index/introducing-o3-and-o4-mini/" />
+		<imprint>
+			<date type="published" when="2025-02-22">April 2025. 2025-02-22</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b33">
+	<monogr>
+		<author>
+			<persName><forename type="first">M</forename><surname>Oquab</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Darcet</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Moutakanni</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Vo</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Szafraniec</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">V</forename><surname>Khalidov</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Fernandez</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Haziza</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">F</forename><surname>Massa</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>El-Nouby</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2304.07193</idno>
+		<title level="m">Dinov2: Learning robust visual features without supervision</title>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b34">
+	<analytic>
+		<title level="a" type="main">Enhancing visual question answering through question-driven image captions as prompts</title>
+		<author>
+			<persName><forename type="first">Ö</forename><surname>Özdemir</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">E</forename><surname>Akagündüz</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">IEEE/CVF Computer Vision and Pattern Recognition Conference</title>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+			<biblScope unit="page" from="1562" to="1571" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b35">
+	<analytic>
+		<title level="a" type="main">Learning transferable visual models from natural language supervision</title>
+		<author>
+			<persName><forename type="first">A</forename><surname>Radford</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><forename type="middle">W</forename><surname>Kim</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Hallacy</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Ramesh</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Goh</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Agarwal</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Sastry</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Askell</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Mishkin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Clark</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">International Conference on Machine Learning</title>
+		<imprint>
+			<date type="published" when="2021">2021</date>
+			<biblScope unit="page" from="8748" to="8763" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b36">
+	<analytic>
+		<title level="a" type="main">Image captioning for effective use of language models in knowledge-based visual question answering</title>
+		<author>
+			<persName><forename type="first">A</forename><surname>Salaberria</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Azkune</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">O</forename><forename type="middle">L</forename><surname>De Lacalle</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Soroa</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">E</forename><surname>Agirre</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">Expert Systems with Applications</title>
+		<imprint>
+			<biblScope unit="volume">212</biblScope>
+			<biblScope unit="page">118669</biblScope>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b37">
+	<analytic>
+		<title level="a" type="main">Laion-5b: An open large-scale dataset for training next generation image-text models</title>
+		<author>
+			<persName><forename type="first">C</forename><surname>Schuhmann</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Beaumont</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Vencu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Gordon</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Wightman</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Cherti</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Coombes</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Katta</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Mullis</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Wortsman</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">Advances in neural information processing systems</title>
+		<imprint>
+			<biblScope unit="volume">35</biblScope>
+			<biblScope unit="page" from="25278" to="25294" />
+			<date type="published" when="2022">2022</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b38">
+	<monogr>
+		<title level="m" type="main">Gemini: a family of highly capable multimodal models</title>
+		<author>
+			<persName><forename type="first">G</forename><surname>Team</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Anil</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Borgeaud</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J.-B</forename><surname>Alayrac</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Yu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Soricut</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Schalkwyk</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><forename type="middle">M</forename><surname>Dai</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Hauth</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Millican</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2312.11805</idno>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b39">
+	<analytic>
+		<title level="a" type="main">Image captioners are scalable vision learners too</title>
+		<author>
+			<persName><forename type="first">M</forename><surname>Tschannen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Kumar</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Steiner</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Zhai</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">N</forename><surname>Houlsby</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Beyer</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">International Conference on Advanced Neural Information Processing Systems</title>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+			<biblScope unit="page" from="46830" to="46855" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b40">
+	<monogr>
+		<title level="m" type="main">Cross-modal retrieval: a systematic review of methods and future directions</title>
+		<author>
+			<persName><forename type="first">T</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">F</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Zhu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><forename type="middle">T</forename><surname>Shen</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2308.14263</idno>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b41">
+	<analytic>
+		<title level="a" type="main">Visionllm v2: An end-to-end generalist multimodal large language model for hundreds of vision-language tasks</title>
+		<author>
+			<persName><forename type="first">J</forename><surname>Wu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Zhong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Xing</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Lai</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">W</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Zhu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Lu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Lu</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">International Conference on Advanced Neural Information Processing Systems</title>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+			<biblScope unit="page" from="69925" to="69975" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b42">
+	<analytic>
+		<title level="a" type="main">Medmnist classification decathlon: A lightweight automl benchmark for medical image analysis</title>
+		<author>
+			<persName><forename type="first">J</forename><surname>Yang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Shi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Ni</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">IEEE 18th International Symposium on Biomedical Imaging (ISBI)</title>
+		<imprint>
+			<date type="published" when="2021">2021</date>
+			<biblScope unit="page" from="191" to="195" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b43">
+	<monogr>
+		<title level="m" type="main">Towards large-scale self-supervised generation of targeted adversarial examples for vision-language models</title>
+		<author>
+			<persName><forename type="first">J</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Ye</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Ma</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Yang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Sang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D.-Y</forename><surname>Yeung</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Anyattack</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2410.05346</idno>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b44">
+	<analytic>
+		<title level="a" type="main">On evaluating adversarial robustness of large vision-language models</title>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Zhao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Pang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Du</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Yang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">N.-M</forename><forename type="middle">M</forename><surname>Cheung</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Lin</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">International Conference on Advanced Neural Information Processing Systems</title>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+			<biblScope unit="page" from="54111" to="54138" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+				</listBibl>
+			</div>
+		</back>
+	</text>
+</TEI>

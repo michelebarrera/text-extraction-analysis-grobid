@@ -1,0 +1,2359 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xml:space="preserve" xmlns="http://www.tei-c.org/ns/1.0" 
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+xsi:schemaLocation="http://www.tei-c.org/ns/1.0 https://raw.githubusercontent.com/kermitt2/grobid/master/grobid-home/schemas/xsd/Grobid.xsd"
+ xmlns:xlink="http://www.w3.org/1999/xlink">
+	<teiHeader xml:lang="en">
+		<fileDesc>
+			<titleStmt>
+				<title level="a" type="main">SMAC: Score-Matched Actor-Critics for Robust Offline-to-Online Transfer</title>
+			</titleStmt>
+			<publicationStmt>
+				<publisher/>
+				<availability status="unknown"><licence/></availability>
+				<date type="published" when="2026-02-19">19 Feb 2026</date>
+			</publicationStmt>
+			<sourceDesc>
+				<biblStruct>
+					<analytic>
+						<author>
+							<persName><forename type="first">Nathan</forename><forename type="middle">S</forename><surname>De Lara</surname></persName>
+						</author>
+						<author>
+							<persName><forename type="first">Florian</forename><surname>Shkurti</surname></persName>
+						</author>
+						<title level="a" type="main">SMAC: Score-Matched Actor-Critics for Robust Offline-to-Online Transfer</title>
+					</analytic>
+					<monogr>
+						<imprint>
+							<date type="published" when="2026-02-19">19 Feb 2026</date>
+						</imprint>
+					</monogr>
+					<idno type="MD5">5ACF62A5B3EB37D1B4E4311CAF911F6C</idno>
+					<idno type="arXiv">arXiv:2602.17632v1[cs.LG]</idno>
+				</biblStruct>
+			</sourceDesc>
+		</fileDesc>
+		<encodingDesc>
+			<appInfo>
+				<application version="0.8.0" ident="GROBID" when="2026-02-22T21:26+0000">
+					<desc>GROBID - A machine learning software for extracting information from scholarly documents</desc>
+					<ref target="https://github.com/kermitt2/grobid"/>
+				</application>
+			</appInfo>
+		</encodingDesc>
+		<profileDesc>
+			<abstract>
+<div xmlns="http://www.tei-c.org/ns/1.0"><p>Modern offline Reinforcement Learning (RL) methods find performant actor-critics, however, fine-tuning these actor-critics online with valuebased RL algorithms typically causes immediate drops in performance. We provide evidence consistent with the hypothesis that, in the loss landscape, offline maxima for prior algorithms and online maxima are separated by low-performance valleys that gradient-based fine-tuning traverses. Following this, we present Score Matched Actor-Critic (SMAC), an offline RL method designed to learn actor-critics that transition to online valuebased RL algorithms with no drop in performance. SMAC avoids valleys between offline and online maxima by regularizing the Q-function during the offline phase to respect a first-order derivative equality between the score of the policy and action-gradient of the Q-function. We experimentally demonstrate that SMAC converges to offline maxima that are connected to better online maxima via paths with monotonically increasing reward found by first-order optimization. SMAC achieves smooth transfer to Soft Actor-Critic and TD3 in 6/6 D4RL tasks. In 4/6 environments, it reduces regret by 34-58% over the best baseline.</p></div>
+			</abstract>
+		</profileDesc>
+	</teiHeader>
+	<text xml:lang="en">
+		<body>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="1.">Introduction</head><p>Fine-tuning actor-critics from offline RL checkpoints with online value-based methods often triggers an immediate drop in performance. We study why offline algorithms produce actor-critics that are brittle to such fine-tuning, through the lens of optimization landscape geometry. For offline RL to truly support a pre-train fine-tune paradigm, it should produce actor-critics that are both performant and able to readily learn from new data. Ideally, an offline RL algorithm should pre-train an actor-critic that can be fine-tuned by any online method without performance degradation. If this condition is satisfied, the usefulness of offline RL increases, as Preprint. Work in progress.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>Discounted Reward</head><p>Figure <ref type="figure">1</ref>. Past offline RL methods converge to maxima separated from online optima by low-reward valleys. Top: reward landscapes on the Kitchen task for CalQL (left) and SMAC (right). Blue and checkered flags being the real locations of the pre-trained and fine-tuned checkpoints on the landscape respectively. The paths and red/yellow flag are illustrative annotations showing the hypothesized trajectory during transfer. Paths demonstrate the existence of a low reward valley between pre-trained and fine-tuned checkpoints when using CalQL. Our method SMAC has no such valleys and is on a unified hill with the fine-tuning checkpoint. Bottom: SMAC vs. CalQL performance in the Kitchen task. See Section 5 for analysis.</p><p>pre-trained actor-critics can be chained with the most dataefficient online algorithms to mimic the pre-train fine-tune paradigm common for large language models today.</p><p>To prevent early fine-tuning drops, offline checkpoints should be adaptable: standard online actor-critic updates should not traverse low-reward regions of parameter space. We formalize this via mode connectivity: two highperforming solutions are connected if some path between them has monotonically changing reward, and linearly connected if the straight line between maxima has monotonically changing reward <ref type="bibr" target="#b17">(Garipov et al., 2018;</ref><ref type="bibr" target="#b11">Frankle et al., 2020;</ref><ref type="bibr" target="#b43">Mirzadeh et al., 2020;</ref><ref type="bibr" target="#b32">Juneja et al., 2023)</ref>. Popular offline RL methods rely on minimizing Q-values for out-of-distribution actions <ref type="bibr" target="#b46">(Nakamoto et al., 2023;</ref><ref type="bibr" target="#b37">Kumar et al., 2020;</ref><ref type="bibr" target="#b30">Jin et al., 2022)</ref>, or explicit policy constraints <ref type="bibr">(Fujimoto &amp; Gu, 2021;</ref><ref type="bibr" target="#b36">Kostrikov et al., 2022;</ref><ref type="bibr" target="#b45">Nair et al., 2020)</ref> which can misalign the offline objective with the online objective, making offline and online optima poorly 50,000 samples 100,000 samples 200,000 samples 400,000 samples 800,000 samples 1,600,000 samples 3,200,000 samples 6,400,000 samples 10,000,000 samples <ref type="bibr">Figure 2</ref>. Increasing dataset size and coverage does not bridge offline-to-online gap. We generate rollouts in two environments with a policy that has a 0.7 success rate and plot the offline-toonline performance as we increase the dataset size. We observe that even when the dataset is so large that it is sufficient for learning optimal policies, the actor-critics found are still quickly unlearned by online fine-tuning.</p><p>connected. We hypothesize that this linear disconnection is an explanatory factor for initial drops in performance during fine-tuning. In section 5, we empirically investigate this and find that several widely used offline RL methods converge to solutions that are not linearly connected to online Soft Actor Critic (SAC) <ref type="bibr" target="#b22">(Haarnoja et al., 2018</ref>) optima by a line along which reward improves monotonically.</p><p>Following this, we introduce Score Matched Actor-Critic (SMAC), which extends SAC with (i) a single critic regularizer, motivated by maximum-entropy RL <ref type="bibr" target="#b21">(Haarnoja et al., 2017)</ref>, that aligns the Q-function's action-gradient ∇ a Q(s, a) with the score of the dataset's action distribution ∇ a log π D (a|s); and (ii) the Muon optimizer <ref type="bibr" target="#b31">(Jordan, 2024)</ref>, which <ref type="bibr" target="#b1">Anonymous (2025)</ref> reported to favour flatter solutions than Adam <ref type="bibr" target="#b33">(Kingma &amp; Ba, 2017)</ref> a property often associated with improved pre-training checkpoints' downstream transfer ability <ref type="bibr" target="#b42">(Liu et al., 2023)</ref>. Across our benchmarks, SMAC converges to offline maxima that are connected to online SAC maxima, supporting the view that connectivity explains offline-to-online transfer.</p><p>We demonstrate this smooth transfer property of SMAC across online RL algorithms, long-horizon tasks, sparse reward tasks, and high-dimensional tasks from the D4RL benchmark datasets <ref type="bibr" target="#b13">(Fu et al., 2021)</ref>. We show that SMAC robustly transfers to online fine-tuning with SAC, TD3 <ref type="bibr" target="#b16">(Fujimoto et al., 2018)</ref>, and TD3+BC <ref type="bibr">(Fujimoto &amp; Gu, 2021)</ref>. In 4/6 tasks, SMAC pre-training followed by SAC fine-tuning reduces regret by 34-58% relative to the best baseline.</p><p>Our contributions are as follows:</p><p>• We show that past offline RL methods exhibiting a performance drop when transitioned to online RL methods coincides with offline methods converging to solutions which are not linearly connected to the solutions that SAC fine-tuning them finds. • We provide an offline RL method that can smoothly transition to online RL algorithms for efficient online fine-tuning, outperforming fine-tuning state-of-the-art offline RL algorithms.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="2.">Preliminaries</head><p>We use the canonical Markov Decision Process (MDP) formulation of RL, which optimizes policies towards maximizing the future discounted sum of rewards. We give a detailed description of: RL, value-based RL, and offline RL in Appendices: A, B, and C. For notation we use s for states, a for actions, r for rewards, π(a|s) for policies, Q(s, a) for Q-functions, J (π) for the expected discounted reward running π, and D = {(s i , a i , r i , s ′ i )} N i=1 for datasets. The transition from offline pre-training to online finetuning causes the policy to explore out-of-distribution states and actions. This exacerbates problems that arise from making out-of-distribution Q-value predictions <ref type="bibr" target="#b64">(Zhou et al., 2024;</ref><ref type="bibr" target="#b46">Nakamoto et al., 2023)</ref>. Previous approaches focus on either (i) methods for the entire offline-to-online process that learn Q-functions, which are not "unlearned" upon transfer <ref type="bibr" target="#b46">(Nakamoto et al., 2023;</ref><ref type="bibr" target="#b57">Wen et al., 2024)</ref>; or (ii) policy regularization methods implemented in the online phase to stop the policy updates from causing a drop in performance <ref type="bibr">(Dong et al., 2025a;</ref><ref type="bibr">Zhang et al., 2023a)</ref>. TD3+BC (Fujimoto &amp; Gu, 2021) is a simple example of (ii). TD3+BC is originally an offline RL algorithm but has been shown to achieve smooth transfer when fine-tuning offline agents by trading off the drop in performance during transfer for final performance <ref type="bibr">(Dong et al., 2025b;</ref><ref type="bibr" target="#b39">Lee et al., 2021)</ref>.</p><p>Local connectivity of maxima in our paper refers to the geometry of expected return J (π) as a function of policy parameters. Two maxima are linearly connected if reward changes monotonically along the line between them in parameter space. A slightly different notion of mode connectivity in supervised learning has been studied, where connectivity means that loss is convex between minima <ref type="bibr" target="#b11">(Frankle et al., 2020)</ref>. <ref type="bibr" target="#b11">Frankle et al. (2020)</ref> observed that in supervised learning, networks trained from a shared pretraining checkpoint often converge to linearly connected maxima. This suggests that after sufficient pre-training, optimization moves within a connected subspace rather than traversing disjoint basins. Further work in supervised learning by <ref type="bibr" target="#b32">Juneja et al. (2023)</ref> show that maxima which are connected have similar generalization abilities.</p><p>Diffusion models estimate the score ∇ x log p(x) of a distribution p(x) given only samples by learning to reverse a K-step noising process. We detail how they are trained and give more specifics in Appendix J. Diffusion models can be used for learning effective policies in continuous MDPs <ref type="bibr" target="#b0">(Ajay et al., 2023;</ref><ref type="bibr" target="#b5">Chi et al., 2024;</ref><ref type="bibr" target="#b28">Intelligence et al., 2025;</ref><ref type="bibr" target="#b29">Janner et al., 2022)</ref>. For policy learning via BC, the diffusion model, written ϵ(a, s, k), is conditioned on state s (not denoised), where k indexes the noising step; notably, at k = 1, this approximates ∇ a log π D (a|s) <ref type="bibr" target="#b26">(Ho et al., 2020;</ref><ref type="bibr" target="#b54">Song &amp; Ermon, 2020)</ref>. Reinforcement via Supervision (RvS) can attain better performance than BC <ref type="bibr" target="#b49">(Piche et al., 2022;</ref><ref type="bibr" target="#b10">Emmons et al., 2022)</ref>. RvS adds forward-looking information to the conditioning. During inference, RvS sets the forward-looking information to a high value.</p><p>Max-Entropy Reinforcement Learning extends the RL objective to include an entropy bonus. For α ∈ (0, ∞), the objective function becomes:</p><formula xml:id="formula_0">J = E π [ ∞ t=1 γ t (R(s t , a t ) + αH(π(•|s t ))]</formula><p>The policy's objective for Max-Entropy RL is minimizing:</p><formula xml:id="formula_1">L π (θ) = E s∼D [D KL (π θ || exp( 1 α Q(s, a)) ā exp( 1 α Q(s, ā))dā )]</formula><p>The optimal Max-Entropy RL policy π * satisfies log π * (a|s <ref type="bibr" target="#b21">(Haarnoja et al., 2017)</ref> called the exact Max-Entropy identity. Taking the gradient with respect to a we get this identity:</p><formula xml:id="formula_2">) = 1 α Q π * (s, a) -log ā exp( 1 α Q π * (s, ā))dā</formula><formula xml:id="formula_3">∇ a log π * (a|s) = 1 α ∇ a Q * (s, a)<label>(1)</label></formula></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="3.">Problem statement</head><p>Let D be an offline dataset collected in an MDP M . An offline RL algorithm A outputs an actor-critic initialization (Q 0 , π 0 ) = A(D). We fine-tune (Q 0 , π 0 ) with an online RL algorithm F that iteratively produces (Q t+1 , π t+1 ) = F (Q t , π t ) for t = 1, . . . , N -1 using interaction data from M and π t . We evaluate A by how well it supports finetuning across a family F of online RL algorithms using the following criteria:</p><formula xml:id="formula_4">1. Stable transfer: E[J (π 1 )] ≥ E[J (π 0 )]</formula><p>where the expectation is over inherent noise in algorithms. This corresponds to not having a drop during the initial phase of online fine-tuning.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="2.">Low online regret: Regret</head><formula xml:id="formula_5">N := N t=1 J (π * ) - J (π t )</formula><p>, where π * ∈ arg max π J (π).</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="4.">Experimental setup</head><p>For baselines, we choose to compare against three common offline RL algorithms: Calibrated Q-Learning (CalQL) <ref type="bibr" target="#b46">(Nakamoto et al., 2023)</ref>, Implicit Q-Learning (IQL) <ref type="bibr" target="#b36">(Kostrikov et al., 2022)</ref>, and TD3+BC <ref type="bibr">(Fujimoto &amp; Gu, 2021)</ref>. CalQL is the succeeding algorithm for Conservative Q-Learning (CQL). CalQL is specifically designed for offline-to-online RL but requires Monte-Carlo returns, so, in environments where a Monte-Carlo return isn't available, we use CQL <ref type="bibr" target="#b37">(Kumar et al., 2020)</ref>; we describe this more in depth in Appendix N.3. We choose these algorithms as baselines because they return actor-critics which can be straightforwardly used in other actor-critic algorithms. We further describe the baselines in Appendix L.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="4.1.">Benchmarks</head><p>We use 6 D4RL <ref type="bibr" target="#b13">(Fu et al., 2021)</ref> benchmarks: hopp er-medium-replay-v2, walker2d-medium-re play-v2, kitchen-partial-v0, door-binar y-v0, pen-binary-v0, and relocate-binary -v0. The pen/door/relocate-binary-v0 environments and datasets are modifications of the original {pen/door/relocate}-cloned-v0 that are used in <ref type="bibr" target="#b45">Nair et al. (2020)</ref>, <ref type="bibr" target="#b64">Zhou et al. (2024), and</ref><ref type="bibr" target="#b46">Nakamoto et al. (2023)</ref>. In Appendix N.1, we describe this in more depth.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>CALQL TD3+BC</head><p>IQL SMAC 1040 800 560 320</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>Reward</head><p>Pre-train SAC Fine-tune TD3+BC Fine-tune Figure <ref type="figure">3</ref>. Reward visualized along a plane in parameter space reveals difference in maxima found by different pre-training and fine-tuning methods on Kitchen task. We see that the SAC maxima are wider and not connected to the pre-trained checkpoint along monotonically improving line across all baselines. Conversely, SAC maxima and SMAC maxima are linearly connected. Subplot titles denote offline algorithm used</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="4.2.">Offline-to-online Setup</head><p>After the offline phase, we collect 5,000 on-policy examples to "warm start" the replay buffer as in <ref type="bibr" target="#b64">(Zhou et al., 2024;</ref><ref type="bibr" target="#b46">Nakamoto et al., 2023)</ref>. We compute online updates by sampling batches with 50% coming from the dataset, and 50% coming from the replay buffer of experiences and train for 200, 000 online steps.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="5.">Linear connectivity of offline and online maxima</head><p>This section links the absence of linearly connected offline and online maxima to the instability often seen when finetuning offline actor-critics. We use reward landscapes to visualize reward geometry along fine-tuning directions. Reward landscapes are the RL analog to loss landscapes in supervised learning. We focus on SAC, as it is a representative online actor-critic algorithm. We plot reward landscapes in the kitchen-partial-v0 environment. Offline RL algorithms achieve strong but suboptimal performance in the environment, so online fine-tuning can strongly improve, or worsen a good policy. We investigate the reward landscapes for offline RL baselines. We also show results for SMAC, the algorithm we present in Section 6 as a reference for effective transfer.  Reward valleys when linearly interpolating between pre-training and fine-tuning checkpoints for all baselines in tasks show linearly disconnected maxima consistent with offline-to-online transfer performance in later plots. We plot the performance along the line between the pre-trained checkpoint and final fine-tuning checkpoint for methods in kitchen-partial (left), door-binary (centre), and hopper-medium-replay (right). 0 is the pre-trained checkpoint, and 1 is the SAC fine-tuned checkpoint. Lines show mean over 4 seeds with shading being standard error.</p><p>In Figure <ref type="figure" target="#fig_2">4</ref>, we interpolate between the pre-trained and finetuned checkpoints for different offline RL algorithms and plot the average reward at different points along the line. More specifically, we pre-train to get parameters θ offline , and then fine-tune with SAC to get θ online . We plot performance on the line θ(t) = θ offline t + (1 -t)θ online by rolling out with parameters θ(t) at various values of t. We observe that in the two left columns all algorithms except SMAC (ours) exhibit a drop in performance between 0 (pre-trained checkpoint) and 1 (fine-tuned checkpoint). Similarly, in Figure <ref type="figure" target="#fig_4">6</ref>, all methods except SMAC suffer a drop in performance when transferring from offline-to-online training in the corre-sponding tasks. This suggests that in an environment where a drop in performance is observed upon transfer, the maxima for offline and online actor-critic methods do not lie on a concave subspace. In the hopper-medium-replay-v2 environment, 3/4 methods show that performance monotonically improves as you interpolate between checkpoints, confirming the results in Figure <ref type="figure" target="#fig_4">6</ref>, where the corresponding 3/4 methods transfer with no drop in performance. We observe that the projected checkpoints (i) travel in straight lines, and (ii) cross a valley of low reward when fine-tuned with SAC but not when fine-tuned with TD3+BC, providing evidence consistent with the reward valley hypothesis.</p><p>As described in Section 2, TD3+BC, an offline algorithm, can fine-tune pre-trained actor-critics without suffering a dip in performance, but, at the cost of converging to suboptimal policies. A natural conclusion is that fine-tuning with TD3+BC moves the parameters in different directions that fine-tuning with SAC. In Figure <ref type="figure">3</ref>, we visualize the loss landscape along these directions by looking at the plane defined by three parameterizations: a θ pre-trained by each subplots labelled algorithm, a SAC fine-tuned θ 1 , and a TD3+BC finetuned θ 2 . Both θ 1 and θ 2 are found by fine-tuning θ with the respective algorithms. The plane is spanned by u := θ 1 -θ, and v := θ 2 -θ, with performance visualized as a contour graph. We denote where in the plane the three parameters lie. We observe that the line between the pre-trained and SAC fine-tuned parameters travels through a low reward valley for all algorithms except SMAC. For all methods, the line between the pre-trained parameters and TD3+BC fine-tuned parameters is thin and high reward. Furthermore, we see that the parameters found by fine-tuning with SAC vs. TD3+BC are not linearly connected. In Appendix M, we describe how we visualize the planes.</p><p>We do acknowledge that optimization trajectories are unlikely to be exactly linear. It is possible that during optimization the parameters follow a curve outside the plotted plane. In Figure <ref type="figure" target="#fig_3">5</ref>, we show the result of our attempt to check whether a projection of the parameters into 2D aligns with our observations in Figure <ref type="figure">3</ref>. The plots show the t-SNE (van der Maaten &amp; Hinton, 2008) projection of checkpoints along the pre-training and two fine-tuning optimization trajectories from Figure <ref type="figure">3</ref>. While t-SNE cannot characterize global geometry, the projection is consistent with our planar visualization, in that SAC fine-tuning trajectories pass through regions of substantially lower reward before converging. This supports the interpretation that the observed performance collapse is associated with low-reward regions in between offline and online maxima.</p><p>6. Score Matched Actor-Critic (SMAC): regularizing Q-values with dataset scores</p><p>In this section, we introduce SMAC, our offline RL method that smoothly transitions to fine-tuning with an arbitrary online RL algorithm. Our approach relies on one theoryinspired regularization of the Q-function and a switch to using the Muon optimizer <ref type="bibr" target="#b31">(Jordan, 2024)</ref> instead of the Adam optimizer <ref type="bibr" target="#b33">(Kingma &amp; Ba, 2017)</ref>. The theory-inspired regularization comes from the exact Max-Entropy identity.</p><p>To regularize the Q-function during the offline phase, we regularize the network's action gradient ∇ a Q(s, a) to be proportional to an estimate of the dataset's action score ∇ a log π(a|s). This relationship comes from the identity in equation ( <ref type="formula" target="#formula_3">1</ref>): ∇ a log π * (a|s) = 1 α ∇ a Q * (s, a). While the identity is only proven for the optimal policy π * , there are other situations where it holds. While the standard SAC algorithm updates Q and π jointly, if Q is frozen and only the π objective is considered, we get that log π(a|s) =</p><formula xml:id="formula_6">1 α Q(s, a) + ā exp( 1 α Q(s, ā)</formula><p>)dā as the solution to π's optimization objective. From this we get an identity equivalent to equation (1) for π and Q. Additionally the noisily rational decision maker model of humans which is a popular model for how humans behave would imply that humancollected demonstrations respect the same identity <ref type="bibr" target="#b18">(Ghosal et al., 2023;</ref><ref type="bibr" target="#b3">Bobu et al., 2024)</ref>. Even when it does not hold, exactly matching ∇ a Q(s, a) to ∇ a log π(a|s) would result in OOD actions being penalized proportionally to how OOD the action is. In this way it is a more careful form of pessimism than what CalQL/CQL use which uniformly lowers all OOD actions.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="6.1.">Estimating the dataset's score</head><p>We employ Reinforcement via Supervision (RvS) methods <ref type="bibr" target="#b10">(Emmons et al., 2022;</ref><ref type="bibr" target="#b49">Piche et al., 2022;</ref><ref type="bibr" target="#b51">Schmidhuber, 2020)</ref> for obtaining a strong diffusion policy which in turn provides strong score estimates. Specifically, we condition the estimator to model ∇ a log(p(a|s, w)) where w is the sum of rewards or binary success indicator of the trajectory that (s, a) belongs to in the dataset. We min-max normalize w in every dataset so w = 1 implies an action in a trajectory with an optimal outcome. For parameterization of our diffusion model, we use the architecture proposed in <ref type="bibr" target="#b23">(Hansen-Estruch et al., 2023)</ref>. We detail training and hyper-parameter choices in Appendix J and ablate the use of RvS in appendix E.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="6.2.">Regularizing the Q-function with score matching</head><p>To regularize the critic's network to be proportional to the dataset score, we learn α through a network α ψ (s) conditioned on states. Conditioning on states allows a more expressive class of networks to minimize the regularization term. Letting ϵ ω be the learned diffusion model we use as a score-estimate, our regularization loss, which we denote L SM (θ, ψ), is defined as:</p><formula xml:id="formula_7">L SM (θ, ψ) = E s∼D a∼B(A) [||∇ a Q θ (s, a) -α ψ (s)ϵ ω (s, a, w, 1)|| 2 2 ]</formula><p>We set k = 1 on our diffusion model to get the least perturbed noise estimate. We define the distribution we sample actions from, B(A), as being a 50/50 split between sampling from π and from the uniform distribution over the action space A. L SM is the only change we make to the original SAC <ref type="bibr" target="#b22">(Haarnoja et al., 2018)</ref> objective functions. We follow their implementation by using target Q-networks <ref type="bibr" target="#b44">(Mnih et al., 2013;</ref><ref type="bibr" target="#b41">Lillicrap et al., 2019)</ref> and ensembles of Q-functions <ref type="bibr" target="#b4">(Chen et al., 2021;</ref><ref type="bibr" target="#b48">Peer et al., 2021)</ref> which are both well-established techniques for reducing Q-function misestimation. For simplicity of notation, we omit the ensembles, but denote the target network as Qθ. Using this notation, the original SAC critic loss is:</p><formula xml:id="formula_8">L AC (θ) = E s,a,r,s ′ ∼D a ′ ∼π ϕ(a|s) [(Q θ (s, a) -r -γQθ(s ′ , a ′ )) 2 ]</formula><p>We augment this loss by adding L SM (θ, ψ) multiplied by a coefficient κ. With this, we define SMAC's critic loss, L SM AC , as:</p><formula xml:id="formula_9">L SM AC (θ, ψ) = κL SM (θ, ψ) + L AC (θ)</formula><p>We optimize the π ϕ in SMAC by using the SAC policy loss: </p><formula xml:id="formula_10">L π (ϕ) = E s∼D a∼π ϕ [-Q θ (s, a) + log π ϕ (a|s)]</formula></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="6.3.">Using Muon as an optimizer</head><p>We found that switching the optimizer from Adam <ref type="bibr" target="#b33">(Kingma &amp; Ba, 2017)</ref> to Muon <ref type="bibr" target="#b31">(Jordan, 2024;</ref><ref type="bibr" target="#b2">Bernstein &amp; Newhouse, 2024)</ref> improved the offline-to-online transfer of SMAC, we present an ablation of this in Appendix I. <ref type="bibr" target="#b2">Bernstein &amp; Newhouse (2024)</ref> show that Adam takes a step in the direction of steepest descent under the max-of-max norm, which is effectively the maximum absolute value of any single parameter. Muon, on the other hand, takes a step in the direction of steepest descent under the spectral norm, the largest singular value in a matrix. Recent work finds that Muon optimizes towards shallower optima <ref type="bibr" target="#b1">(Anonymous, 2025)</ref> which has been linked to stronger transfer to downstream fine-tuning <ref type="bibr" target="#b42">(Liu et al., 2023)</ref>. In Appendix I we ablate optimizing the baselines with Muon and find they get no positive effect from the change.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="7.">Experimental Results</head><p>We compare different offline RL algorithms' generated offline checkpoints' ability to transfer to online RL algorithms by transferring to: SAC, TD3, and TD3+BC. SAC is the most representative and popular algorithm in online valuebased RL combining deterministic gradients with entropy regularization. TD3 is an antecedent algorithm to SAC which doesn't use entropy regularization and only uses deterministic gradients for updating the policy. For this reason we include it, <ref type="bibr" target="#b38">Lee et al. (2025)</ref> similarly evaluate their architecture against SAC and DDPG (antecedent algorithm to TD3 which only uses deterministic gradients) to show the architecture works well along popular online value-based techniques. TD3+BC adds behaviour cloning to TD3, while originally an offline RL algorithm and less efficient than TD3, it has been shown to improve transfer abilities for offline-to-online RL <ref type="bibr">(Dong et al., 2025b)</ref>.</p><p>Additionally, in appendix G we have results when using Advantage Weighted Regression (AWR) for fine-tuning. AWR is an offline policy optimization approach and so we find it provides stable transfer for baselines but at a significant cost of fine-tuning efficiency and final performance. SMAC still smoothly transfers under AWR, and attains lower regret on average than the baselines but we find fine-tuning with AWR is almost always worse than any of the three finetuning methods above. We don't consider online transfer to SMAC because the pre-trained diffusion model would then have to be continually updated which would be both computationally costly and can result in catastrophic forgetting in important states and actions.</p><p>Figure <ref type="figure" target="#fig_4">6</ref> shows offline-to-online transfer when fine-tuning with SAC. Most baselines experience drastic performance drops upon transfer: CalQL in 3/4 environments, IQL in 4/6, and TD3+BC in 5/6. In contrast, SMAC avoids any performance drop across all environments, smoothly improving to the highest observed performance. These results correlate well with the interpolation and planar plots from Section 5. When fine-tuning with TD3, we again observe smooth transfer for SMAC, which generally dominates both offline and online performance in 4/6 environments.</p><p>Table <ref type="table" target="#tab_0">1</ref> shows the average regret over all environments when regrets are min-max normalized so that 1 is worst regret observed and 0 is best regret observed per environment. We observe that across all online algorithms tested SMAC outperforms the baselines when averaging over environments.</p><p>In Appendix G we list the average regret for each algorithm we test in each environment. We define regret for an algo- rithm as</p><formula xml:id="formula_11">∞ t=0 (R * -R t )</formula><p>, where R * , denotes the highest reward observed in the environment over all agents, and R t is the reward the algorithm obtained at timestep t during the online phase. In 4/6 environments SMAC achieves the lowest regret when considering all offline and online combinations. In those 4 environments, SMAC achieves regret anywhere from 34% to 58% lower than the best performing baseline. In the 2 environments where SMAC does not achieve the lowest regret it attains the second and third lowest regret.</p><p>In Figure <ref type="figure">7</ref> we plot all methods fine-tuned with TD3. Similarly, Figure <ref type="figure">8</ref> plots all methods fine-tuned with TD3+BC, with SMAC→SAC overlaid as a lower bound for optimal adaptive performance. SMAC still achieves smooth transfer in 6/6 environments when fine-tuning with TD3 and 4/6 when fine-tuning with TD3+BC. However in 2 environments (kitchen and walker2d) SMAC's performance deteriorates with ongoing training. We attribute this to the BC term incentivizing the policy to copy suboptimal actions in the dataset and replay buffer. This attribution is supported by the fact that pen, door, and relocate (which contain only successful demonstrations) show no such degradation.</p><p>From comparing Figures <ref type="figure">7</ref> and<ref type="figure">8</ref> we observe that in some environments, adding a BC term stabilizes offline-to-online transfer for IQL and TD3+BC while causing long term performance drops in SMAC and CalQL/CQL not observed when using TD3. One can also separate IQL and TD3+BC from CalQL/CQL and SMAC by whether they constrain the policy during the offline phase. During the online phase, regularizing the actor-critics generated by IQL and TD3+BC close to the behaviour data is a continuation of their offline optimization; this is the opposite for CalQL/CQL and SMAC. Conversely, fine-tuning with TD3 where the agents must only maximize the critic's estimate of the policy's sampled actions closely resembles the offline policy optimization for CalQL/CQL and SMAC. We believe this dichotomy between fine-tuning with TD3 vs. TD3+BC and which offline algorithms pair better reinforces our hypothesis about connected optima being an explanatory factor for offline-to-online stability.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="8.">Related works</head><p>SMAC follows previous work showing that strong offline RL agents can be trained by penalizing the Q-function on OOD actions <ref type="bibr" target="#b37">(Kumar et al., 2020;</ref><ref type="bibr" target="#b30">Jin et al., 2022;</ref><ref type="bibr" target="#b57">Wen et al., 2024;</ref><ref type="bibr" target="#b35">Kostrikov et al., 2021;</ref><ref type="bibr">Yu &amp; Zhang, 2023;</ref><ref type="bibr" target="#b64">Zhou et al., 2024;</ref><ref type="bibr" target="#b46">Nakamoto et al., 2023)</ref>. This regularization ensures that the critic disincentivizes the policy from choosing OOD actions. A different branch of algorithms ensures this by regularizing the policy to stay close to dataset actions <ref type="bibr">(Fujimoto &amp; Gu, 2021;</ref><ref type="bibr" target="#b58">Wu et al., 2019;</ref><ref type="bibr" target="#b36">Kostrikov et al., 2022;</ref><ref type="bibr" target="#b45">Nair et al., 2020)</ref>. As discussed in Section 5 the first type of approach mis-specifies the problem while the second underspecifies it. In our results section, we show that algorithms which follow the first branch exhibit better offline-to-online performance, implying that mis-specification is better than under-specification for offline-to-online transfer.</p><p>Unlike our method, several offline-to-online papers have looked at algorithms which are applied in both the offline and online phases. These methods rely on regularizing the critic <ref type="bibr" target="#b46">(Nakamoto et al., 2023;</ref><ref type="bibr" target="#b39">Lee et al., 2021;</ref><ref type="bibr">Yu &amp; Zhang, 2023;</ref><ref type="bibr" target="#b63">Zheng et al., 2023)</ref>, policy <ref type="bibr">(Zhang et al., 2023a;</ref><ref type="bibr">b)</ref>, or both <ref type="bibr" target="#b57">(Wen et al., 2024)</ref>. We differentiate our method from this collection of work as our focus is purely on offline RL algorithms which transfer to general actor-critic algorithms like SAC or TD3. This focus is shared with <ref type="bibr">Yu &amp; Zhang (2023)</ref> and <ref type="bibr" target="#b62">Zhao et al. (2023)</ref>. <ref type="bibr" target="#b62">Zhao et al. (2023)</ref> advocate CQL with large critic ensembles for the offline stage. Since our CalQL/CQL baseline already uses an ensemble critic, we expect it to capture much of the benefit of their proposal. <ref type="bibr" target="#b35">Kostrikov et al. (2021)</ref> and <ref type="bibr">Yu &amp; Zhang (2023)</ref> are the methods most similar to SMAC. Both papers leverage the exact Max-Entropy RL identity to design offline RL algorithms whose Q-value estimates are influenced by the score of the dataset. Our work is most similar to <ref type="bibr">Yu &amp; Zhang (2023)</ref> who first learn a Q-function that is parameterized by a value function plus the score of the policy, similar to <ref type="bibr" target="#b19">Gu et al. (2016)</ref>. <ref type="bibr">Yu &amp; Zhang (2023)</ref> extends beyond <ref type="bibr" target="#b19">Gu et al. (2016)</ref> because at the start of online training, they extend the width of the first layer of the value network to incorporate actions as well. We chose not to include <ref type="bibr">Yu &amp; Zhang (2023)</ref> as a baseline because, while conceptually similar, their parameterization means that the offline algorithm does not return an actor network and a critic network which can be used straightforwardly by SAC or TD3+BC. Additionally, their experimental results show unstable transfer and suboptimal regret as compared to CQL fine-tuned with SAC.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="9.">Limitations &amp; future work</head><p>There are several promising future directions building off SMAC and limitations to be addressed. SMAC fits well with the current state of pre-trained VLAs, which are large BC diffusion models. One of the highest computational costs in SMAC is the pre-training of an accurate dataset score estimator. At the time of publication, several of these models already exist for general robotic tasks, and fine-tuning them to new tasks is straightforward <ref type="bibr" target="#b28">(Intelligence et al., 2025;</ref><ref type="bibr" target="#b47">NVIDIA et al., 2025;</ref><ref type="bibr" target="#b55">Team et al., 2025;</ref><ref type="bibr" target="#b53">Shukor et al., 2025)</ref>. SMAC can easily build off this existing architecture to go beyond the VLAs performance on tasks where reward-labelled trajectories have been collected.</p><p>While SMAC's offline-to-online performance improves upon baselines, there are several limitations which are themselves interesting areas of research. Namely, the reliance on a diffusion model imposes a large upfront computational cost for a model which does not end up getting used in the online phase, finding ways to reliably estimate the score of the model or directly regressing the action-gradient of the Q-function against a score-matching loss show promise as future approaches. Smooth online transfer is also still dependent on large batch sizes in the online setting as shown in Appendix D.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="10.">Conclusion</head><p>In offline RL, we can pre-train strong actor-critics from a fixed dataset, but when these same models are fine-tuned online with standard value-based algorithms (e.g., SAC/TD3), they often suffer an immediate drop in reward. We provide evidence consistent with a geometric explanation: prior offline methods converge to high-reward solutions that are separated from online optima by low-reward regions, so gradient-based fine-tuning traverses a "low reward valley" before recovering. To address this, we introduced Score-Matched Actor-Critic (SMAC), an offline RL method that pre-trains actor-critics to be compatible with subsequent online fine-tuning by (i) regularizing the critic so its actiongradient matches the dataset policy score (estimated with a return-conditioned diffusion model), and (ii) using the Muon optimizer to improve the stability of the learned solution. Across 6 D4RL tasks, SMAC transfers smoothly to online SAC and TD3 without an initial performance collapse, and in 4/6 environments it reduces online regret by 34-58% relative to the best baseline, while reaching the highest final performance among the methods we tested.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="11.">Impact Statement</head><p>This paper presents work whose goal is to advance the field of machine learning. There are many potential societal consequences of our work, none of which we feel must be specifically highlighted here.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>A. Reinforcement Learning</head><p>We assume the traditional Markov Decision Process (MDP) formulation of RL, which optimizes policies π towards maximizing the future discounted sum of rewards. An MDP, commonly referred to as an environment, is defined as a 6-tuple (S, A, R s,a , T s ′ s,a , d 0 , γ) where: S is a state space, A an action space, R s,a : S × A → R a reward function, T s ′ s,a : S × A → ∆(S) a transition function which takes a state-action pair and returns a next state, and d 0 an initial state distribution. A policy π : S → ∆(A) maps states to distributions over actions. The optimization objective for RL is to find π which maximizes</p><formula xml:id="formula_12">J (π) = E s0∼d0 [ ∞ t=1 γ t R(s t , a t )|s t ∼ T s ′</formula><p>s,a (s t |s t-1 , a t-1 ), a t ∼ π(a t |s t )] which is the expected return from following π in the MDP. For notation, we use s for states, a for actions, r for rewards, π(a|s) for policies, G t for the discounted sum of rewards following time-step t, E π [ ∞ t γ t R(s t , a t )] as the expected sum of rewards following π. We denote the policy that generates a dataset D by π D and define datasets as a set of state, action, reward, and next state tuples:</p><formula xml:id="formula_13">D = {(s i , a i , r i , s ′ i )} N i=1 .</formula></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>B. Value-based Reinforcement Learning</head><p>Value-based RL is an efficient approach for learning optimal policies from on-policy and off-policy experience. It involves learning a Q-function Q π (s, a), also called a critic, for a policy π which takes the current state s and action a and attempts to predict the discounted sum of future rewards E π [ T t=0 γ t R(s t , a t )|a 0 = a, s 0 = s]. We craft prediction targets for learning a Q-function through the temporal difference update that leverages the following identity:</p><formula xml:id="formula_14">E π [ ∞ l=t γ l r l ] = r t + γE π [ ∞ l=t+1 γ l-t R(s l , a l )] = r t + γE s ′ ∼T s ′ s,a (s,a) a ′ ∼π(a ′ |s) [Q(s ′ , a ′ )]</formula><p>The Q-function is then learned by minimizing E π [(Q(s, a) -r(s, a) -γQ(s ′ , a ′ )) 2 ]. Value-based RL uses the learned Q-function to update the policy. This approach relies on Q-function being accurate in the states and actions where the policy queries it during learning. Hence, inaccurate critics can cause divergences in learning because the policy can be optimized towards sampling bad actions that the critic has mis-estimated.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>C. Offline Reinforcement Learning</head><p>Offline RL assumes access to only a dataset D = {(s i , a i , r i , s ′ i )} N i=1 and prohibits the policy from directly interacting with the MDP. Value estimation errors are the main problem that offline RL methods attempt to overcome. In the temporal difference update, the policy is able to pick unseen actions for a ′ . This causes the created prediction target to depend on the Q-function's out-of-distribution predictions. If these out-of-distribution predictions are over-estimates, a biased and incorrectly high target will be formed for our Q-value. This can, in turn, reinforce the policy to sample bad out-of-distribution actions because the Q-function over-estimates their value. To avoid this, the majority of offline RL methods either train the policy to generate actions as close to the data as possible <ref type="bibr">(Fujimoto &amp; Gu, 2021;</ref><ref type="bibr" target="#b36">Kostrikov et al., 2022)</ref>, restrict the policy from sampling actions in creating the TD-target, or use pessimism, which explicitly minimizes out-of-distribution Q-value predictions <ref type="bibr" target="#b37">(Kumar et al., 2020;</ref><ref type="bibr" target="#b46">Nakamoto et al., 2023)</ref>. D. Batch size and notions of sharpness matter in offline-to-online RL Optimization landscapes have shown that the ratio between batch size and learning rate impacts the generalization strength of the final parameters <ref type="bibr">(He et al., 2019;</ref><ref type="bibr" target="#b9">Elgharabawy et al., 2020)</ref>. The best generalizing offline RL actor-critic should generalize to the online setting without suffering from distribution shift. So, we investigate whether the findings transfer over to the offline-to-online setting. We vary the ratio by varying the batch size and observe how it relates to the performance drops in offline-to-online RL.</p><p>In Figure <ref type="figure">9</ref>, we ablate over several offline batch sizes while keeping an online batch size of 512 constant. We observe that larger batch sizes uniformly lead to better offline performance. Interestingly, we observe that across methods, the performance drops to a similar point. For the baselines, this common point is worse than any offline performance value. In Figure <ref type="figure">12</ref> we plot π(a|s) and Q(s, a) in an environment where A is 2-dimensional. We plot π(a|s) and Q(s, a) at several checkpoints during training. The figure shows that identity (1) appears to roughly hold during online training.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>G. Regret during online phase</head><p>For each environment we find the max reward observed over all runs and denote it R * . For a run with observed online rewards {R t } ∞ t=1 we define its regret at 1</p><formula xml:id="formula_15">T T t=1 R * -R t .</formula><p>In the tables below we list the regret of each offline-online algorithm pairing per environment. We write the mean and standard error of the regret. We also shade cells gold, silver, and bronze to signify lowest regret, second lowest regret, and third lowest regret per environment. Figure <ref type="figure" target="#fig_4">16</ref>. Muon critical for offline-to-online success of SMAC we plot the offline-to-online curves for SMAC when using Muon vs. Adam optimizers. We observe that using Adam leads to a drop in performance during transfer in 3/6 environments whereas using Muon experiences no drop across all environments. where sg(•) is the stop-gradient operator. We use the following hyper-parameters for TD3+BC in each environment: </p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>M. Generating contour graphs of planes in parameter space</head><p>To generate and plot a plane in parameter space from three parameterizations θ 1 , θ 2 , θ 3 we follow <ref type="bibr" target="#b43">Mirzadeh et al. (2020)</ref> and do the following: get difference vectors u := θ 2 -θ 1 , v := θ 3 -θ 1 which span the plane; orthogonalize them by making u ′ := u, v ′ := v -cos(u, v)v; sample parameters along grid of parameters defined by θ(t, l) = θ + lu + tv where t, l ∈ [-0.2, 1.2] × [-0.2, 1.2] and run in environment to get corresponding reward. Following this we use matplotlib's contour plotting function to generate the plot from the grid data.</p><p>Raise the first term to ((•) -1 ) -1 and applying log rules bring one exponent to the front and apply the other to flip the fraction.</p><p>= -E a∼π θ (a|s) [log( π(a|s) exp( 1 c2 Q)</p><p>)] + V (s)</p><p>add and subtract log(Z(s)):</p><p>= -E a∼π θ (a|s) [log( π(a|s) exp( <ref type="formula" target="#formula_3">1</ref>c2 Q) Z(s))] + V (s) -log(Z(s))</p><p>bring the Z(s) down to the denominator = -E a∼π θ (a|s) [log( π(a|s)</p><formula xml:id="formula_16">exp( 1 c 2 Q) Z(s)</formula><p>)] + V (s) -log(Z(s))</p><p>and observe that the first term is a KL-divergence:</p><formula xml:id="formula_17">= -D KL (π(a|s)|| exp( 1 c2 Q) Z(s)</formula><p>) + V (s) -Z(s)</p><p>By the proof in the section above, we see then that π maximizes this objective function since V (s) and Z(s) are invariant to it. For the first update step of line 6 in the original PPO algorithm <ref type="bibr" target="#b52">(Schulman et al., 2017)</ref>, θ = θ old . So, this objective above matches the objective at the start of the training part for every iteration of the PPO algorithm. If ∇ a log(π(a|s)) = 1 c2 ∇ a Q(s, a) then the objective above is maximized. Since the objective above matches the objective at the first step in the training section of the PPO loop the policy will not be updated. Then θ = θ old for the following updates in the training section and resulting iterations through the PPO algorithm. Thus, θ maximizes the objective.</p></div><figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_2"><head>Figure 4 .</head><label>4</label><figDesc>Figure 4. Reward valleys when linearly interpolating between pre-training and fine-tuning checkpoints for all baselines in tasks show linearly disconnected maxima consistent with offline-to-online transfer performance in later plots. We plot the performance along the line between the pre-trained checkpoint and final fine-tuning checkpoint for methods in kitchen-partial (left), door-binary (centre), and hopper-medium-replay (right). 0 is the pre-trained checkpoint, and 1 is the SAC fine-tuned checkpoint. Lines show mean over 4 seeds with shading being standard error.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_3"><head>Figure 5 .</head><label>5</label><figDesc>Figure 5. t-SNE projections of training trajectories show linearly disconnected maxima. We take the pre-training checkpoints, SAC fine-tuning checkpoints, and TD3+BC fine-tuning checkpoints and plot their T-SNE projections with lines and arrows signifying the training trajectory/ordering of the checkpoints. We observe that the projected checkpoints (i) travel in straight lines, and (ii) cross a valley of low reward when fine-tuned with SAC but not when fine-tuned with TD3+BC, providing evidence consistent with the reward valley hypothesis.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_4"><head>Figure 6 .</head><label>6</label><figDesc>Figure6. SMAC achieves smooth offline-to-online transfer to SAC. Plot shows offline-to-online transfer results for SMAC and baselines when fine-tuned with SAC. Environments are only named with the first word since that uniquely identifies them among the six. The dotted line shows where the agent transfers from offline learning to online learning, with the shaded section denoting offline learning.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_5"><head>Figure 7 .Figure 8 .</head><label>78</label><figDesc>Figure 7. SMAC achieves smooth offline-to-online transfer to TD3. Plot shows offline-to-online transfer results for SMAC and baselines when fine-tuned with TD3. The format follows Figure 6.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_6"><head>Figure 11 .</head><label>11</label><figDesc>Figure 11. Removing RvS hurts transfer in 2/3 environments but has mixed impact on online performance. SMAC still dominates baselines without using RvS for training the diffusion model</figDesc><graphic coords="15,201.24,301.01,194.19,129.46" type="bitmap" /></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_7"><head>Figure 13 .Figure 15 .</head><label>1315</label><figDesc>Figure13. Offline-to-Online RL curves when fine-tuning with AWR. Observe that SMAC achieves smooth transfer on 4/6 environments, dominating other approaches in 5/6 environments. However, in kitchen pen, door, and relocate which are our hardest benchmarks the reward curves are universally lower than for other fine-tuning approaches.</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" xml:id="fig_8"><head></head><label></label><figDesc>Fujimoto &amp; Gu, 2021)  loss functions are as follows for a critic parameterized by ϕ with target params φ, and policy parameterized by θL(ϕ) = E s,a,r,s ′ ∼D a ′ ∼π θ (a|s) [(Q ϕ (s, a) -r -γQ φ(s ′ , a ′ )) 2 L(θ) = -E s,a∼D,a ′ ∼π θ (a|s) [-Q ϕ (s, a) sg(|Q ϕ (s, a)|) + β||a ′ -a|| 2 2 ]</figDesc></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" type="table" xml:id="tab_0"><head>Table 1 .</head><label>1</label><figDesc>Normalized Regret averaged over all six environments (↓ lower is better). Values are min-max normalized per environment then averaged. SMAC achieves the lowest regret across all four online algorithms, with particularly strong gains when paired with SAC.</figDesc><table><row><cell></cell><cell></cell><cell cols="2">Online Algorithm</cell></row><row><cell cols="2">Offline Algorithm AWR</cell><cell>SAC</cell><cell>TD3 TD3+BC</cell></row><row><cell>IQL</cell><cell cols="3">0.508 0.471 0.653</cell><cell>0.494</cell></row><row><cell>SMAC</cell><cell cols="3">0.380 0.031 0.090</cell><cell>0.226</cell></row><row><cell>TD3+BC</cell><cell cols="3">0.654 0.962 0.545</cell><cell>0.562</cell></row><row><cell>CalQL/CQL</cell><cell cols="3">0.482 0.448 0.442</cell><cell>0.614</cell></row></table></figure>
+<figure xmlns="http://www.tei-c.org/ns/1.0" type="table" xml:id="tab_1"><head>Table 10 :</head><label>10</label><figDesc>TD3+BC hyper-parameters across task.</figDesc><table><row><cell>Hyper-parameter</cell><cell>Locomotion</cell><cell>Adroit</cell><cell>Kitchen</cell></row><row><cell>Critic learning rate</cell><cell>0.0003</cell><cell>0.0003</cell><cell>0.0003</cell></row><row><cell>Critic hidden dims</cell><cell cols="3">[512, 512, 512] [512, 512] [512, 512, 512]</cell></row><row><cell>Critic activations</cell><cell>relu</cell><cell>relu</cell><cell>relu</cell></row><row><cell>Critic ensemble size</cell><cell>10</cell><cell>10</cell><cell>10</cell></row><row><cell>Critic target update ratio</cell><cell>0.005</cell><cell>0.005</cell><cell>0.005</cell></row><row><cell>Policy learning rate</cell><cell>0.0001</cell><cell>0.0001</cell><cell>0.0001</cell></row><row><cell>Policy hidden dims</cell><cell>[512, 512]</cell><cell cols="2">[512, 512] [512, 512, 512]</cell></row><row><cell>Policy std transformation to be ≥ 0</cell><cell>exp</cell><cell>exp</cell><cell>exp</cell></row><row><cell>Policy activations</cell><cell>relu</cell><cell>relu</cell><cell>relu</cell></row><row><cell>Discount γ</cell><cell>0.99</cell><cell>0.99</cell><cell>0.99</cell></row><row><cell>Offline batch size</cell><cell>32</cell><cell>32</cell><cell>32</cell></row><row><cell>Online batch size</cell><cell>1024</cell><cell>1024</cell><cell>1024</cell></row><row><cell>Offline Gradient Steps</cell><cell>250,000</cell><cell>200,000</cell><cell>400,000</cell></row><row><cell>TD3 BC loss weight β</cell><cell>2</cell><cell>15</cell><cell>5.0</cell></row><row><cell>AWR Temperature β</cell><cell>1</cell><cell>1</cell><cell>1</cell></row><row><cell>Sac target entropy</cell><cell>-|A|</cell><cell>-|A|</cell><cell>-|A|</cell></row></table></figure>
+			<note xmlns="http://www.tei-c.org/ns/1.0" place="foot" n="1" xml:id="foot_0"><p>Department of Computer Science, University of Toronto, Toronto, Canada</p></note>
+			<note xmlns="http://www.tei-c.org/ns/1.0" place="foot" n="2" xml:id="foot_1"><p>Vector Institute. Correspondence to: Nathan S. de Lara &lt;nathan.delara@mail.utoronto.ca&gt;.</p></note>
+		</body>
+		<back>
+			<div type="annex">
+<div xmlns="http://www.tei-c.org/ns/1.0"><p>However, for our method, that point is the worst offline performance value we observe over batch sizes, and it is often higher than or equal to the baselines' observed offline performances.</p><p>Following this observation about minimum batch size, we set an offline batch size of 32 and ablate the online batch size across methods. We plot the results in Figure <ref type="figure">10</ref>. Similarly to <ref type="bibr" target="#b64">Zhou et al. (2024)</ref>, we observe that generally larger batch sizes lead to stronger performance, except for the case of TD3+BC, where we continue to see that all batch size choices lead to a drop in performance which is not recovered from within the number of online steps we allotted for the experiment.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>E. Ablating Reinforcement via Supervision in Offline-to-Online performance</head><p>In the figure below we plot the performance of SMAC when we use RvS to train and inference the diffusion model vs. when we train the diffusion model without any extra conditioning. We observe that the performance is still significantly stronger than the baselines but suffers slight drops in performance when transferring to online learning across the environments. We also observe that the offline performance is worsened as well. Given that the three environments are ones where the main assumption underlying SMAC is broken, this puts more evidence behind the claim that RvS is a key component allowing SMAC to work when datasets fail the key assumption that ∇ a log π(a|s) ∝ ∇ a Q(s, a).</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>H. Sensitivity to κ</head><p>In Figure <ref type="figure">14</ref> we show offline-to-online performance curves for SMAC when fine-tuned by SAC in the kitchen task across varying values of κ. SMAC shows good performance across a wide range of values for κ, with performance improving as κ increases before eventually levelling off. We do however observe that κ = 5 performance is significantly worse and there is a slight drop upon transfer to online RL. For κ &lt; 5 offline performance is unable to maximize reward at all, staying at the lowest reward possible. </p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>I. How much does adding Muon matter?</head><p>In Figure <ref type="figure">15</ref>, we plot the considered baselines' performance when optimized with Muon in the kitchen-partial-v0 environment. We do this to answer whether Muon was the only key improvement that led to the stable transfer we get from SMAC.</p><p>Optimizing with Muon leads to better offline performance, but worse transfer stability with IQL and TD3+BC experiencing complete policy collapse. Previous papers studying the use of Muon and other "whitening" optimizers show that Muon converges to maxima which exhibit smaller condition numbers in the loss Hessian and take steps that minimize the spectral norm of the gradients <ref type="bibr" target="#b2">(Bernstein &amp; Newhouse, 2024;</ref><ref type="bibr" target="#b12">Frans et al., 2025)</ref>. This leads the network to converge to flatter maxima, which are in turn harder to escape from if trying to optimize towards a different maximum <ref type="bibr" target="#b27">(Ibayashi &amp; Imaizumi, 2023;</ref><ref type="bibr" target="#b34">Kleinberg et al., 2018)</ref>.</p><p>We now plot the results across the 6 environments when we optimize SMAC with Adam instead of Muon. We find that SMAC still transfers in 3/6 environments but performance suffers across nearly all environments except Hopper.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>J. Diffusion Model Introduction, Training, and Hyper-parameters</head><p>A diffusion model ϵ θ (x) learns to match noised versions of ∇ log p(x) at K varying noise levels <ref type="bibr" target="#b54">(Song &amp; Ermon, 2020;</ref><ref type="bibr" target="#b26">Ho et al., 2020)</ref>. In practice, a diffusion model is trained to reverse the K-step noising process</p><p>k=1 define the noise schedule. The noise schedule can be any monotonically decreasing function, but, for our experiments we used the cosine noise schedule <ref type="bibr" target="#b50">(Ramesh et al., 2021)</ref>. The reverse denoising step is</p><p>The ᾱk noise schedule is assumed to be known and, so the diffusion model is trained to predict ϵ given √ ᾱk x + √ 1 -ᾱk ϵ and k as input. The loss for a diffusion model ϵ θ is</p><p>This loss function is equivalent to the noised conditional score network loss <ref type="bibr" target="#b54">(Song &amp; Ermon, 2020)</ref>. So, the converged model ϵ θ (x, k) estimates ∇ log p(x)/ √ ᾱk , a scaled version of the score.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>J.1. Hyper-parameters</head><p>We use the CleanDiffuser <ref type="bibr" target="#b8">(Dong et al., 2024)</ref> package for initializing, training, and inferencing the diffusion models. Within the package we make use of the IDQMLP introduced by Hansen-Estruch et al. ( <ref type="formula">2023</ref>). Recall for RvS conditioning the value is min-max normalized during training so 1 is the highest the model has seen. We list the hyper-parameter choices below:  </p><p>The term |τ -δ(V ψ (s) -Q ϕ (s, a) &lt; 0)| is the expectile loss so differences where V ψ (s) -Q ϕ (s, a) &gt; 0 have τ weights and differences where V ψ (s) -Q ϕ (s, a) &lt; 0 get (τ -1) weights. When τ &gt; 0.5 this incentivizes predicting above the mean. The closer τ is to 1 the more the value network is incentivized to over-shoot the Q-values. The hyper-parameters we use for IQL are listed below </p><p>where B(s) is defined the same as its defined in section 6.</p><p>The Conservative Q-Learning loss functions are:</p><p>From this it becomes clear how CQL is the antecedent algorithm to CalQL as CalQL modifies the second term on the CQL objective to mitigate under-estimation. In the table below the Locomotion column is for CQL while the other columns show hyper-params for CaQL The hopper-medium-replay-v2 and walker2d-medium-replay-v2 were chosen as they are datasets with purely suboptimal behaviours from which optimal behaviour can be learned. kitchen-partial-v0 was picked as it is an example of a long-horizon task that involves composing the completion of 4 independent tasks together. Lastly, door-binary-v0, relocate-binary-v0, and pen-binary-v0 were picked as they are sparse reward, longhorizon, and high-dimensional tasks where offline RL methods are known to struggle. The modifications made to them are removing failure demonstrations, and terminating episodes at states where the goal is achieved which changes the termination condition of the environment.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>N.2. A note on Offline-to-Online Specific Benchmarks</head><p>We choose not to use online RL algorithms like O3F SUNG <ref type="bibr" target="#b20">(Guo et al., 2024)</ref>, PROTO <ref type="bibr" target="#b40">(Li et al., 2023)</ref>, or PEX <ref type="bibr">(Zhang et al., 2023a)</ref> specifically designed for offline-to-online comparison because they are generally working on the inverse of our problem statement. Finding one online RL algorithm which works for as many offline RL algorithms. We show that sufficient BC regularization of the policy in the online phase is generally sufficient for this to be accomplished. Additionally, several of these works demonstrate significantly longer online training periods in the millions of steps to accomplish rewards which we report in the first few thousand steps when fine-tuning with SAC or TD3+BC.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>N.3. Evaluating CalQL vs CQL</head><p>In infinite-horizon environments datasets fail to have full Monte-Carlo returns since trajectories must be truncated to fit into a finite dataset. So, in datasets where Monte-Carlo returns are available, we use CalQL, and when Monte-Carlo returns are unavailable we use CQL. The two environments which don't have Monte-Carlo returns in their datasets that we test on are hopper-medium-replay-v2 and walker2d-medium-replay-v2 as they are infinite-horizon tasks. </p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>O. Algorithm Pseudocode</head><p>We present our algorithm Score Matched Actor-Critic (SMAC) in pseudocode. We point out that SMAC is only defined for the offline phase since our intent is for SMAC to be usable by arbitrary online actor-critic algorithms.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>P. SAC and PPO respect identity at Optima</head></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head>P.1. SAC</head><p>The SAC loss function for a policy π with Q-function Q π old is By assumption, let ∇ a log(π(a|s)) = ∇ a Q(s, a). Then since π(a|s) must satisfy the axioms of probability measures we have A π(a|s) = 1, hence. Now, keeping s fixed we consider Q and π along only a. We have that π minimizes the loss. )] + 1 c 2 V (s)</p></div>			</div>
+			<div type="references">
+
+				<listBibl>
+
+<biblStruct xml:id="b0">
+	<monogr>
+		<title level="m" type="main">Is conditional generative modeling all you need for decision-making?</title>
+		<author>
+			<persName><forename type="first">A</forename><surname>Ajay</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Du</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Gupta</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Tenenbaum</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Jaakkola</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Agrawal</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2211.15657" />
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b1">
+	<analytic>
+		<title level="a" type="main">Long-tailed learning with muon optimizer</title>
+		<author>
+			<persName><surname>Anonymous</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=go388T3QjQ.un-derreview" />
+	</analytic>
+	<monogr>
+		<title level="m">Submitted to The Fourteenth International Conference on Learning Representations</title>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b2">
+	<monogr>
+		<title level="m" type="main">Old optimizer, new norm: An anthology</title>
+		<author>
+			<persName><forename type="first">J</forename><surname>Bernstein</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Newhouse</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2409.20325" />
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b3">
+	<analytic>
+		<title level="a" type="main">Aligning human and robot representations</title>
+		<author>
+			<persName><forename type="first">A</forename><surname>Bobu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Peng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Agrawal</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><forename type="middle">A</forename><surname>Shah</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><forename type="middle">D</forename><surname>Dragan</surname></persName>
+		</author>
+		<idno type="DOI">10.1145/3610977.3634987</idno>
+		<ptr target="http://dx.doi.org/10.1145/3610977.3634987" />
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of the 2024 ACM/IEEE International Conference on Human-Robot Interaction, HRI &apos;24</title>
+		<meeting>the 2024 ACM/IEEE International Conference on Human-Robot Interaction, HRI &apos;24</meeting>
+		<imprint>
+			<publisher>ACM</publisher>
+			<date type="published" when="2024-03">March 2024</date>
+			<biblScope unit="page" from="42" to="54" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b4">
+	<monogr>
+		<title level="m" type="main">Randomized ensembled double q-learning: Learning fast without a model</title>
+		<author>
+			<persName><forename type="first">X</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Zhou</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Ross</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2101.05982" />
+		<imprint>
+			<date type="published" when="2021">2021</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b5">
+	<monogr>
+		<title level="m" type="main">Diffusion policy: Visuomotor policy learning via action diffusion</title>
+		<author>
+			<persName><forename type="first">C</forename><surname>Chi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Xu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Feng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">E</forename><surname>Cousineau</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Du</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Burchfiel</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Tedrake</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Song</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2303.04137" />
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b6">
+	<monogr>
+		<author>
+			<persName><forename type="first">P</forename><surname>Dong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Q</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Sadigh</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Finn</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Expo</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2507.07986</idno>
+		<title level="m">Stable reinforcement learning with expressive policies</title>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b7">
+	<monogr>
+		<author>
+			<persName><forename type="first">P</forename><surname>Dong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Zheng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Finn</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Sadigh</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Eysenbach</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2510.07650" />
+		<title level="m">Value flows</title>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b8">
+	<monogr>
+		<title level="m" type="main">Cleandiffuser: An easy-to-use modularized library for diffusion models in decision making</title>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Dong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Yuan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Hao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">F</forename><surname>Ni</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Ma</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Zheng</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2406.09509</idno>
+		<ptr target="https://arxiv.org/abs/2406.09509" />
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b9">
+	<monogr>
+		<author>
+			<persName><forename type="first">A</forename><surname>Elgharabawy</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">W</forename><surname>Zhang</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=BMbPxn4a-A" />
+		<title level="m">Reproducing analysis on batch size and learningrate for model generalization</title>
+		<imprint>
+			<date type="published" when="2019">2020. 2019</date>
+		</imprint>
+	</monogr>
+	<note>Reproducibility Challenge</note>
+</biblStruct>
+
+<biblStruct xml:id="b10">
+	<monogr>
+		<title level="m" type="main">What is essential for offline rl via supervised learning?</title>
+		<author>
+			<persName><forename type="first">S</forename><surname>Emmons</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Eysenbach</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">I</forename><surname>Kostrikov</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Levine</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Rvs</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2112.10751" />
+		<imprint>
+			<date type="published" when="2022">2022</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b11">
+	<monogr>
+		<title level="m" type="main">Linear mode connectivity and the lottery ticket hypothesis</title>
+		<author>
+			<persName><forename type="first">J</forename><surname>Frankle</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><forename type="middle">K</forename><surname>Dziugaite</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><forename type="middle">M</forename><surname>Roy</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Carbin</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/1912.05671" />
+		<imprint>
+			<date type="published" when="2020">2020</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b12">
+	<monogr>
+		<title level="m" type="main">What really matters in matrix-whitening optimizers?</title>
+		<author>
+			<persName><forename type="first">K</forename><surname>Frans</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Abbeel</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Levine</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2510.25000" />
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b13">
+	<monogr>
+		<title level="m" type="main">D4{rl}: Datasets for deep data-driven reinforcement learning</title>
+		<author>
+			<persName><forename type="first">J</forename><surname>Fu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Kumar</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">O</forename><surname>Nachum</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Tucker</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Levine</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=px0-N3_KjA" />
+		<imprint>
+			<date type="published" when="2021">2021</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b14">
+	<analytic>
+		<title level="a" type="main">A minimalist approach to offline reinforcement learning</title>
+		<author>
+			<persName><forename type="first">S</forename><surname>Fujimoto</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><forename type="middle">S</forename><surname>Gu</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Advances in Neural Information Processing Systems</title>
+		<editor>
+			<persName><forename type="first">M</forename><surname>Ranzato</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">A</forename><surname>Beygelzimer</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">Y</forename><surname>Dauphin</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">P</forename><surname>Liang</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">J</forename><forename type="middle">W</forename><surname>Vaughan</surname></persName>
+		</editor>
+		<imprint>
+			<biblScope unit="volume">34</biblScope>
+			<biblScope unit="page" from="20132" to="20145" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b15">
+	<monogr>
+		<title/>
+		<author>
+			<persName><surname>Curran Associates</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Inc</surname></persName>
+		</author>
+		<ptr target="https://proceedings.neurips.cc/paper_files/paper/2021/file/a8166da05c5a094f7dc03724b41886e5-Paper.pdf" />
+		<imprint>
+			<date type="published" when="2021">2021</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b16">
+	<monogr>
+		<title level="m" type="main">Addressing function approximation error in actor-critic methods</title>
+		<author>
+			<persName><forename type="first">S</forename><surname>Fujimoto</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Van Hoof</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Meger</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/1802.09477" />
+		<imprint>
+			<date type="published" when="2018">2018</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b17">
+	<monogr>
+		<title level="m" type="main">Loss surfaces, mode connectivity, and fast ensembling of dnns</title>
+		<author>
+			<persName><forename type="first">T</forename><surname>Garipov</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Izmailov</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Podoprikhin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Vetrov</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><forename type="middle">G</forename><surname>Wilson</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/1802.10026" />
+		<imprint>
+			<date type="published" when="2018">2018</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b18">
+	<monogr>
+		<title level="m" type="main">The effect of modeling human rationality level on learning rewards from multiple feedback types</title>
+		<author>
+			<persName><forename type="first">G</forename><forename type="middle">R</forename><surname>Ghosal</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Zurek</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><forename type="middle">S</forename><surname>Brown</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><forename type="middle">D</forename><surname>Dragan</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2208.10687" />
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b19">
+	<monogr>
+		<author>
+			<persName><forename type="first">S</forename><surname>Gu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Lillicrap</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">I</forename><surname>Sutskever</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Levine</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/1603.00748" />
+		<title level="m">Continuous deep q-learning with model-based acceleration</title>
+		<imprint>
+			<date type="published" when="2016">2016</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b20">
+	<monogr>
+		<title level="m" type="main">A simple unified uncertaintyguided framework for offline-to-online reinforcement learning</title>
+		<author>
+			<persName><forename type="first">S</forename><surname>Guo</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Sun</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Hu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Huang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Piao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Sun</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Chang</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2306.07541" />
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b21">
+	<monogr>
+		<author>
+			<persName><forename type="first">T</forename><surname>Haarnoja</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Tang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Abbeel</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Levine</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/1702.08165" />
+		<title level="m">Reinforcement learning with deep energy-based policies</title>
+		<imprint>
+			<date type="published" when="2017">2017</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b22">
+	<monogr>
+		<title level="m" type="main">Soft actor-critic algorithms and applications</title>
+		<author>
+			<persName><forename type="first">T</forename><surname>Haarnoja</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Zhou</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Hartikainen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Tucker</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Ha</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Tan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">V</forename><surname>Kumar</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Zhu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Gupta</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Abbeel</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:1812.05905</idno>
+		<imprint>
+			<date type="published" when="2018">2018</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b23">
+	<monogr>
+		<title level="m" type="main">Idql: Implicit q-learning as an actorcritic method with diffusion policies</title>
+		<author>
+			<persName><forename type="first">P</forename><surname>Hansen-Estruch</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">I</forename><surname>Kostrikov</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Janner</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><forename type="middle">G</forename><surname>Kuba</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Levine</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2304.10573" />
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b24">
+	<analytic>
+		<title level="a" type="main">Control batch size and learning rate to generalize well: Theoretical and empirical evidence</title>
+		<author>
+			<persName><forename type="first">F</forename><surname>He</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Tao</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Advances in Neural Information Processing Systems</title>
+		<editor>
+			<persName><forename type="first">H</forename><surname>Wallach</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">H</forename><surname>Larochelle</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">A</forename><surname>Beygelzimer</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">F</forename><surname>Alché-Buc</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">E</forename><surname>Fox</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">R</forename><surname>Garnett</surname></persName>
+		</editor>
+		<imprint>
+			<biblScope unit="volume">32</biblScope>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b25">
+	<monogr>
+		<title/>
+		<author>
+			<persName><surname>Curran Associates</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Inc</surname></persName>
+		</author>
+		<imprint>
+			<date type="published" when="2019">2019</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b26">
+	<monogr>
+		<author>
+			<persName><forename type="first">J</forename><surname>Ho</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Jain</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Abbeel</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2006.11239" />
+		<title level="m">Denoising diffusion probabilistic models</title>
+		<imprint>
+			<date type="published" when="2020">2020</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b27">
+	<analytic>
+		<title level="a" type="main">Why does SGD prefer flat minima?: Through the lens of dynamical systems</title>
+		<author>
+			<persName><forename type="first">H</forename><surname>Ibayashi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Imaizumi</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=Zffca0v-i5S" />
+	</analytic>
+	<monogr>
+		<title level="m">When Machine Learning meets Dynamical Systems: Theory and Applications</title>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b28">
+	<monogr>
+		<title level="m" type="main">π * 0.6 : a vla that learns from experience</title>
+		<author>
+			<persName><forename type="first">P</forename><surname>Intelligence</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Amin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Aniceto</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Balakrishna</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Black</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Conley</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Connors</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Darpinian</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Dhabalia</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Dicarlo</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Driess</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Equi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Esmail</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Fang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Finn</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Glossop</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Godden</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">I</forename><surname>Goryachev</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Groom</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Hancock</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Hausman</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Hussein</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Ichter</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Jakubczak</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Jen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Jones</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Katz</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Ke</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Kuchi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Lamb</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Leblanc</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Levine</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Li-Bell</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Lu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">V</forename><surname>Mano</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Mothukuri</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Nair</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Pertsch</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><forename type="middle">Z</forename><surname>Ren</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Sharma</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><forename type="middle">X</forename><surname>Shi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Smith</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><forename type="middle">T</forename><surname>Springenberg</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Stachowicz</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">W</forename><surname>Stoeckle</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Swerdlow</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Tanner</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Torne</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Q</forename><surname>Vuong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Walling</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Williams</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Yoo</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Yu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">U</forename><surname>Zhilinsky</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Zhou</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2511.14759" />
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b29">
+	<monogr>
+		<title level="m" type="main">Planning with diffusion for flexible behavior synthesis</title>
+		<author>
+			<persName><forename type="first">M</forename><surname>Janner</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Du</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><forename type="middle">B</forename><surname>Tenenbaum</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Levine</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2205.09991" />
+		<imprint>
+			<date type="published" when="2022">2022</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b30">
+	<monogr>
+		<title level="m" type="main">Is pessimism provably efficient for offline rl?</title>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Jin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Yang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Wang</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2012.15085" />
+		<imprint>
+			<date type="published" when="2022">2022</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b31">
+	<monogr>
+		<author>
+			<persName><forename type="first">K</forename><surname>Jordan</surname></persName>
+		</author>
+		<ptr target="https://kellerjordan.github.io/posts/muon/" />
+		<title level="m">Muon: An optimizer for hidden layers in neural networks</title>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b32">
+	<monogr>
+		<title level="m" type="main">Linear connectivity reveals generalization strategies</title>
+		<author>
+			<persName><forename type="first">J</forename><surname>Juneja</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Bansal</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Cho</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Sedoc</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">N</forename><surname>Saphra</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2205.12411" />
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b33">
+	<monogr>
+		<title level="m" type="main">A method for stochastic optimization</title>
+		<author>
+			<persName><forename type="first">D</forename><forename type="middle">P</forename><surname>Kingma</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Ba</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Adam</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/1412.6980" />
+		<imprint>
+			<date type="published" when="2017">2017</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b34">
+	<analytic>
+		<title level="a" type="main">An alternative view: When does SGD escape local minima?</title>
+		<author>
+			<persName><forename type="first">B</forename><surname>Kleinberg</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Yuan</surname></persName>
+		</author>
+		<ptr target="https://proceedings.mlr.press/v80/kleinberg18a.html" />
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of the 35th International Conference on Machine Learning</title>
+		<editor>
+			<persName><forename type="first">J</forename><surname>Dy</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">A</forename><surname>Krause</surname></persName>
+		</editor>
+		<meeting>the 35th International Conference on Machine Learning</meeting>
+		<imprint>
+			<publisher>PMLR</publisher>
+			<date type="published" when="2018-07-15">10-15 Jul 2018</date>
+			<biblScope unit="volume">80</biblScope>
+			<biblScope unit="page" from="2698" to="2707" />
+		</imprint>
+	</monogr>
+	<note>Proceedings of Machine Learning Research</note>
+</biblStruct>
+
+<biblStruct xml:id="b35">
+	<monogr>
+		<title level="m" type="main">Offline reinforcement learning with fisher divergence critic regularization</title>
+		<author>
+			<persName><forename type="first">I</forename><surname>Kostrikov</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Tompson</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Fergus</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">O</forename><surname>Nachum</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2103.08050" />
+		<imprint>
+			<date type="published" when="2021">2021</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b36">
+	<analytic>
+		<title level="a" type="main">Offline reinforcement learning with implicit q-learning</title>
+		<author>
+			<persName><forename type="first">I</forename><surname>Kostrikov</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Nair</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Levine</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=68n2s9ZJWF8" />
+	</analytic>
+	<monogr>
+		<title level="m">International Conference on Learning Representations</title>
+		<imprint>
+			<date type="published" when="2022">2022</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b37">
+	<monogr>
+		<title level="m" type="main">Conservative q-learning for offline reinforcement learning</title>
+		<author>
+			<persName><forename type="first">A</forename><surname>Kumar</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Zhou</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Tucker</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Levine</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2006.04779" />
+		<imprint>
+			<date type="published" when="2020">2020</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b38">
+	<analytic>
+		<title level="a" type="main">Simplicity bias for scaling up parameters in deep reinforcement learning</title>
+		<author>
+			<persName><forename type="first">H</forename><surname>Lee</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Hwang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Kim</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Kim</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><forename type="middle">J</forename><surname>Tai</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Subramanian</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><forename type="middle">R</forename><surname>Wurman</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Choo</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Stone</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Seno</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Simba</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=jXLiDKsuDo" />
+	</analytic>
+	<monogr>
+		<title level="m">The Thirteenth International Conference on Learning Representations</title>
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b39">
+	<monogr>
+		<title level="m" type="main">Offlineto-online reinforcement learning via balanced replay and pessimistic q-ensemble</title>
+		<author>
+			<persName><forename type="first">S</forename><surname>Lee</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Seo</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Lee</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Abbeel</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Shin</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2107.00591" />
+		<imprint>
+			<date type="published" when="2021">2021</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b40">
+	<monogr>
+		<author>
+			<persName><forename type="first">J</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Hu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Xu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Zhan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y.-Q</forename><surname>Zhang</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2305.15669</idno>
+		<title level="m">Proto: Iterative policy regularized offline-to-online reinforcement learning</title>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b41">
+	<monogr>
+		<title level="m" type="main">Continuous control with deep reinforcement learning</title>
+		<author>
+			<persName><forename type="first">T</forename><forename type="middle">P</forename><surname>Lillicrap</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><forename type="middle">J</forename><surname>Hunt</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Pritzel</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">N</forename><surname>Heess</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Erez</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Tassa</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Silver</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Wierstra</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/1509.02971" />
+		<imprint>
+			<date type="published" when="2019">2019</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b42">
+	<analytic>
+		<title level="a" type="main">Same pre-training loss, better downstream: Implicit bias matters for language models</title>
+		<author>
+			<persName><forename type="first">H</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><forename type="middle">M</forename><surname>Xie</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Ma</surname></persName>
+		</author>
+		<ptr target="https://proceedings.mlr.press/v202/liu23ao.html" />
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of the 40th International Conference on Machine Learning</title>
+		<editor>
+			<persName><forename type="first">A</forename><surname>Krause</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">E</forename><surname>Brunskill</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">K</forename><surname>Cho</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">B</forename><surname>Engelhardt</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">S</forename><surname>Sabato</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">J</forename><surname>Scarlett</surname></persName>
+		</editor>
+		<meeting>the 40th International Conference on Machine Learning</meeting>
+		<imprint>
+			<publisher>PMLR</publisher>
+			<date type="published" when="2023-07-29">23-29 Jul 2023</date>
+			<biblScope unit="volume">202</biblScope>
+			<biblScope unit="page" from="22188" to="22214" />
+		</imprint>
+	</monogr>
+	<note>Proceedings of Machine Learning Research</note>
+</biblStruct>
+
+<biblStruct xml:id="b43">
+	<monogr>
+		<title level="m" type="main">Linear mode connectivity in multitask and continual learning</title>
+		<author>
+			<persName><forename type="first">S</forename><forename type="middle">I</forename><surname>Mirzadeh</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Farajtabar</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Gorur</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Pascanu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Ghasemzadeh</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2010.04495" />
+		<imprint>
+			<date type="published" when="2020">2020</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b44">
+	<monogr>
+		<title level="m" type="main">Playing atari with deep reinforcement learning</title>
+		<author>
+			<persName><forename type="first">V</forename><surname>Mnih</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Kavukcuoglu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Silver</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Graves</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">I</forename><surname>Antonoglou</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Wierstra</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Riedmiller</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/1312.5602" />
+		<imprint>
+			<date type="published" when="2013">2013</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b45">
+	<monogr>
+		<title level="m" type="main">Accelerating online reinforcement learning with offline datasets</title>
+		<author>
+			<persName><forename type="first">A</forename><surname>Nair</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Gupta</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Dalal</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Levine</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Awac</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2006.09359</idno>
+		<imprint>
+			<date type="published" when="2020">2020</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b46">
+	<analytic>
+		<title level="a" type="main">Cal-ql: Calibrated offline rl pre-training for efficient online fine-tuning</title>
+		<author>
+			<persName><forename type="first">M</forename><surname>Nakamoto</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Zhai</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Singh</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Sobol Mark</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Ma</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Finn</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Kumar</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Levine</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="j">Advances in Neural Information Processing Systems</title>
+		<imprint>
+			<biblScope unit="volume">36</biblScope>
+			<biblScope unit="page" from="62244" to="62269" />
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b47">
+	<monogr>
+		<title level="m" type="main">Gr00t n1: An open foundation model for generalist humanoid robots</title>
+		<author>
+			<persName><forename type="first">:</forename><surname>Nvidia</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Bjorck</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">F</forename><surname>Castañeda</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">N</forename><surname>Cherniadev</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Da</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Ding</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><forename type="middle">J</forename><surname>Fan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Fang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Fox</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">F</forename><surname>Hu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Huang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Jang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Jiang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Kautz</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Kundalia</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Lao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Lin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Lin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">E</forename><surname>Llontop</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><surname>Magne</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Mandlekar</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Narayan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Nasiriany</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Reed</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><forename type="middle">L</forename><surname>Tan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Q</forename><surname>Wang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Xiang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Xie</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Xu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Xu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Ye</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Yu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Zhao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Zheng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Zhu</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2503.14734" />
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b48">
+	<monogr>
+		<title level="m" type="main">Ensemble bootstrapping for q-learning</title>
+		<author>
+			<persName><forename type="first">O</forename><surname>Peer</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Tessler</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">N</forename><surname>Merlis</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Meir</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2103.00445" />
+		<imprint>
+			<date type="published" when="2021">2021</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b49">
+	<monogr>
+		<title level="m" type="main">Implicit offline reinforcement learning via supervised learning</title>
+		<author>
+			<persName><forename type="first">A</forename><surname>Piche</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Pardinas</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Vazquez</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">I</forename><surname>Mordatch</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Pal</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2210.12272" />
+		<imprint>
+			<date type="published" when="2022">2022</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b50">
+	<monogr>
+		<title level="m" type="main">Zero-shot text-toimage generation</title>
+		<author>
+			<persName><forename type="first">A</forename><surname>Ramesh</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Pavlov</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Goh</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Gray</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Voss</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Radford</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">I</forename><surname>Sutskever</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2102.12092" />
+		<imprint>
+			<date type="published" when="2021">2021</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b51">
+	<monogr>
+		<author>
+			<persName><forename type="first">J</forename><surname>Schmidhuber</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/1912.02875" />
+		<title level="m">Reinforcement learning upside down: Don&apos;t predict rewards -just map them to actions</title>
+		<imprint>
+			<date type="published" when="2020">2020</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b52">
+	<monogr>
+		<title level="m" type="main">Proximal policy optimization algorithms</title>
+		<author>
+			<persName><forename type="first">J</forename><surname>Schulman</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">F</forename><surname>Wolski</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Dhariwal</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Radford</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">O</forename><surname>Klimov</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:1707.06347</idno>
+		<imprint>
+			<date type="published" when="2017">2017</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b53">
+	<monogr>
+		<title level="m" type="main">A vision-language-action model for affordable and efficient robotics</title>
+		<author>
+			<persName><forename type="first">M</forename><surname>Shukor</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Aubakirova</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">F</forename><surname>Capuano</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Kooijmans</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Palma</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Zouitine</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Aractingi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Pascal</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Russi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Marafioti</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Alibert</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Cord</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Wolf</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Cadene</surname></persName>
+		</author>
+		<author>
+			<persName><surname>Smolvla</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2506.01844" />
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b54">
+	<monogr>
+		<title level="m" type="main">Generative modeling by estimating gradients of the data distribution</title>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Song</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Ermon</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/1907.05600" />
+		<imprint>
+			<date type="published" when="2020">2020</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b55">
+	<monogr>
+		<title level="m" type="main">A careful examination of large behavior models for multitask dexterous manipulation</title>
+		<author>
+			<persName><forename type="first">T</forename><forename type="middle">L</forename><surname>Team</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Barreiros</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Beaulieu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Bhat</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Cory</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">E</forename><surname>Cousineau</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Dai</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C.-H</forename><surname>Fang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Hashimoto</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><forename type="middle">Z</forename><surname>Irshad</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Itkina</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">N</forename><surname>Kuppuswamy</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K.-H</forename><surname>Lee</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Mcconachie</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">I</forename><surname>Mcmahon</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Nishimura</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Phillips-Grafflin</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Richter</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Shah</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Srinivasan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Wulfe</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Xu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Alspach</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Angeles</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Arora</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">V</forename><forename type="middle">C</forename><surname>Guizilini</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Castro</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T.-S</forename><surname>Chu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Creasey</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Curtis</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Denitto</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">E</forename><surname>Dixon</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">E</forename><surname>Dusel</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Ferreira</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Goncalves</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Gould</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Guoy</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Gupta</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Han</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Hatch</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Hathaway</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Henry</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Hochsztein</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Horgan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Iwase</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Jackson</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Karamcheti</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Keh</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Masterjohn</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Mercat</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Miller</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Mitiguy</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">T</forename><surname>Nguyen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Nimmer</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Noguchi</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Ong</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Onol</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">O</forename><surname>Pfannenstiehl</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Poyner</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">L</forename><forename type="middle">P M</forename><surname>Rocha</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Richardson</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Rodriguez</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Seale</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Sherman</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Smith-Jones</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Tago</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Tokmakov</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Tran</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><forename type="middle">V</forename><surname>Hoorick</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">I</forename><surname>Vasiljevic</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Zakharov</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">M</forename><surname>Zolotas</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Ambrus</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">K</forename><surname>Fetzer-Borelli</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">B</forename><surname>Burchfiel</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Kress-Gazit</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Feng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Ford</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Tedrake</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2507.05331" />
+		<imprint>
+			<date type="published" when="2025">2025</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b56">
+	<analytic>
+		<title level="a" type="main">Visualizing data using tsne</title>
+		<author>
+			<persName><forename type="first">L</forename><surname>Van Der Maaten</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Hinton</surname></persName>
+		</author>
+		<ptr target="http://jmlr.org/papers/v9/vandermaaten08a.html" />
+	</analytic>
+	<monogr>
+		<title level="j">Journal of Machine Learning Research</title>
+		<imprint>
+			<biblScope unit="volume">9</biblScope>
+			<biblScope unit="issue">86</biblScope>
+			<biblScope unit="page" from="2579" to="2605" />
+			<date type="published" when="2008">2008</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b57">
+	<analytic>
+		<title level="a" type="main">Towards robust offline-to-online reinforcement learning via uncertainty and smoothness</title>
+		<author>
+			<persName><forename type="first">X</forename><surname>Wen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Yu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">R</forename><surname>Yang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Chen</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Bai</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Wang</surname></persName>
+		</author>
+		<idno type="DOI">10.1613/jair.1.16457</idno>
+		<ptr target="http://dx.doi.org/10.1613/jair.1.16457" />
+	</analytic>
+	<monogr>
+		<title level="j">Journal of Artificial Intelligence Research</title>
+		<idno type="ISSN">1076-9757</idno>
+		<imprint>
+			<biblScope unit="volume">81</biblScope>
+			<biblScope unit="page" from="481" to="509" />
+			<date type="published" when="2024-11">November 2024</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b58">
+	<monogr>
+		<title level="m" type="main">Behavior regularized offline reinforcement learning</title>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Wu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">G</forename><surname>Tucker</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">O</forename><surname>Nachum</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/1911.11361" />
+		<imprint>
+			<date type="published" when="2019">2019</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b59">
+	<analytic>
+		<title level="a" type="main">Actor-critic alignment for offline-toonline reinforcement learning</title>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Yu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Zhang</surname></persName>
+		</author>
+		<ptr target="https://proceedings.mlr.press/v202/yu23k.html" />
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of the 40th International Conference on Machine Learning</title>
+		<title level="s">Proceedings of Machine Learning Research</title>
+		<editor>
+			<persName><forename type="first">A</forename><surname>Krause</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">E</forename><surname>Brunskill</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">K</forename><surname>Cho</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">B</forename><surname>Engelhardt</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">S</forename><surname>Sabato</surname></persName>
+		</editor>
+		<editor>
+			<persName><forename type="first">J</forename><surname>Scarlett</surname></persName>
+		</editor>
+		<meeting>the 40th International Conference on Machine Learning</meeting>
+		<imprint>
+			<publisher>PMLR</publisher>
+			<date type="published" when="2023-07-29">23-29 Jul 2023</date>
+			<biblScope unit="volume">202</biblScope>
+			<biblScope unit="page" from="40452" to="40474" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b60">
+	<monogr>
+		<title level="m" type="main">Policy expansion for bridging offline-to-online reinforcement learning</title>
+		<author>
+			<persName><forename type="first">H</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">W</forename><surname>Xu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">H</forename><surname>Yu</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2302.00935</idno>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b61">
+	<monogr>
+		<title level="m" type="main">A perspective of q-value estimation on offline-to-online reinforcement learning</title>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Zhang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">C</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Niu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Yang</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">W</forename><surname>Ouyang</surname></persName>
+		</author>
+		<ptr target="https://arxiv.org/abs/2312.07685" />
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b62">
+	<analytic>
+		<title level="a" type="main">Improving offline-to-online reinforcement learning with q-ensembles</title>
+		<author>
+			<persName><forename type="first">K</forename><surname>Zhao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Ma</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Liu</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Hao</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Y</forename><surname>Zheng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Meng</surname></persName>
+		</author>
+		<ptr target="https://openreview.net/forum?id=96v4oHJ1OE" />
+	</analytic>
+	<monogr>
+		<title level="m">ICML Workshop on New Frontiers in Learning, Control, and Dynamical Systems</title>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b63">
+	<analytic>
+		<title level="a" type="main">Adaptive policy learning for offline-to-online reinforcement learning</title>
+		<author>
+			<persName><forename type="first">H</forename><surname>Zheng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Luo</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">P</forename><surname>Wei</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">X</forename><surname>Song</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">D</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">J</forename><surname>Jiang</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of the AAAI Conference on Artificial Intelligence</title>
+		<meeting>the AAAI Conference on Artificial Intelligence</meeting>
+		<imprint>
+			<date type="published" when="2023">2023</date>
+			<biblScope unit="volume">37</biblScope>
+			<biblScope unit="page" from="11372" to="11380" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct xml:id="b64">
+	<monogr>
+		<author>
+			<persName><forename type="first">Z</forename><surname>Zhou</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Peng</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Q</forename><surname>Li</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">S</forename><surname>Levine</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">A</forename><surname>Kumar</surname></persName>
+		</author>
+		<idno type="arXiv">arXiv:2412.07762</idno>
+		<title level="m">Efficient online reinforcement learning fine-tuning need not retain offline data</title>
+		<imprint>
+			<date type="published" when="2024">2024</date>
+		</imprint>
+	</monogr>
+	<note type="report_type">arXiv preprint</note>
+</biblStruct>
+
+<biblStruct xml:id="b65">
+	<monogr>
+		<title level="m" type="main">Offline-to-online regret when fine-tuning with SAC (↓ lower is better). Entries are mean ± std over seeds; &quot;-&quot; indicates not evaluated. Cell colors are assigned per environment across all four tables: best (gold), second (silver), third (bronze). Offline Algorithm Environment CalQL/CQL IQL SMAC TD3+BC door 134</title>
+		<idno>0 1801.2 ± 180.6 650.5 ± 39.9 4739.6 ± 125</idno>
+		<imprint/>
+	</monogr>
+	<note>pen 8.0 ± 0.7 10.3 ± 0.7 5.3 ± 0.7 55.2 ± 1.9 relocate 98.1 ± 0.4 97.4 ± 0.4 62.8 ± 2.1 99.2 ± 0.0 walker2d 1553.7 ± 0.</note>
+</biblStruct>
+
+<biblStruct xml:id="b66">
+	<monogr>
+		<title level="m" type="main">Offline-to-online regret when fine-tuning with TD3 (↓ lower is better). Entries are mean ± std over seeds; &quot;-&quot; indicates not evaluated. Cell colors are assigned per environment across all four tables: best (gold), second (silver), third (bronze). Offline Algorithm Environment CalQL/CQL IQL SMAC TD3+BC door 131</title>
+		<idno>4 4689.0 ± 101.3 987.5 ± 17.2 454.9 ± 62.2 Table</idno>
+		<imprint/>
+	</monogr>
+	<note>pen 8.4 ± 0.7 16.1 ± 0.5 8.5 ± 0.8 41.6 ± 2.9 relocate 97.8 ± 0.5 95.2 ± 0.3 58.3 ± 1.3 99.1 ± 0.0 walker2d 1148.2 ± 63.</note>
+</biblStruct>
+
+<biblStruct xml:id="b67">
+	<monogr>
+		<title level="m" type="main">Offline-to-online regret when fine-tuning with AWR (↓ lower is better). Entries are mean ± std over seeds; &quot;-&quot; indicates not evaluated. Cell colors are assigned per environment across all four tables: best (gold), second (silver), third (bronze). Offline Algorithm Environment CalQL/CQL IQL SMAC TD3+BC door 129</title>
+		<idno>6 1918.7 ± 114.4 544.4 ± 58.1 1988.4 ± 312</idno>
+		<imprint/>
+	</monogr>
+	<note>.7 pen 28.8 ± 2.6 18.0 ± 0.5 13.3 ± 0.7 32.9 ± 3.0 relocate 99.0 ± 0.1 95.8 ± 0.3 98.3 ± 0.2 98.1 ± 0.2 walker2d 1136.9 ± 42.</note>
+</biblStruct>
+
+<biblStruct xml:id="b68">
+	<monogr>
+		<title level="m" type="main">Offline-to-online regret when fine-tuning with TD3+BC (↓ lower is better). Entries are mean ± std over seeds; &quot;-&quot; indicates not evaluated. Cell colors are assigned per environment across all four tables: best (gold), second (silver), third (bronze). Offline Algorithm Environment CalQL/CQL IQL SMAC TD3+BC door 140</title>
+		<idno>235.6 1548.6 118.0 1232.3 ± 194.5 1242.6 ± 64.8</idno>
+		<imprint/>
+	</monogr>
+	<note>± 11.5 pen 17.8 ± 2.9 16.1 ± 0.6 7.7 ± 0.6 31.8 ± 1.0 relocate 99.1 ± 0.0 95.3 ± 0.3 84.9 ± 2.0 98.2 ± 0.2 walker2d 2642.5 ±</note>
+</biblStruct>
+
+				</listBibl>
+			</div>
+		</back>
+	</text>
+</TEI>
