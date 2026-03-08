@@ -89,3 +89,9 @@ Este proyecto tiene varias limitaciones:
 ## Licencia
 
 Este proyecto está distribuido bajo licencia Apache 2.0.
+
+---
+
+# DOI 
+
+DOI: https://doi.org/10.5281/zenodo.18909941
