@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+title: Paper Analysis with Grobid
+message: If you use this software, please cite it as below.
+authors:
+  - family-names: Barrera
+    given-names: Michele
+version: 1.0
+date-released: 2026
+license: Apache 2.0
