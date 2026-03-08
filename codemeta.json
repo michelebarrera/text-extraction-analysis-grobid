@@ -1,0 +1,14 @@
+{
+  "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+  "@type": "SoftwareSourceCode",
+  "name": "Paper Analysis with Grobid",
+  "description": "Un pequeño proyecto que analiza artículos científicos utilizando resultados XML de Grobid. Extrae resúmenes, genera una nube de palabras clave, cuenta cifras y extrae enlaces de cada artículo.",
+  "author": {
+    "@type": "Person",
+    "givenName": "Michele",
+    "familyName": "Barrera"
+  },
+  "programmingLanguage": "Python",
+  "license": "Apache 2.0",
+  "codeRepository": "https://github.com/michelebarrera/text-extraction-analysis.grobid"
+}
