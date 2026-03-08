@@ -57,6 +57,7 @@ Los resultados se guardarán en la carpeta `outputs`.
 
 ## Ejecución usando Docker
 
+(desde la carpeta donde esta el Dockerfile)
 - Construir la imagen: docker build -t paper-analysis .
 - Ejecutar el contenedor: docker run paper-analysis
 
