@@ -25,9 +25,9 @@ Cada artículo fue procesado utilizando Grobid para convertir los archivos PDF e
 
 ## Estructura del proyecto
 
-data/ → artículos y XML generados por Grobid
-scripts/ → scripts de análisis en Python
-outputs/ → resultados generados por los scripts
+- data/ → artículos y XML generados por Grobid
+- scripts/ → scripts de análisis en Python
+- outputs/ → resultados generados por los scripts
 
 
 ---
