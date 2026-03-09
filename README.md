@@ -55,6 +55,14 @@ Los resultados se guardarán en la carpeta `outputs`.
 
 ---
 
+## Citación y Metadata
+
+Este repositorio incluye archivos de metadatos para facilitar la citación adecuada y la interoperabilidad con las infraestructuras de investigación.
+- **CITATION.cff**: Proporciona información de citas para que el repositorio se pueda citar correctamente. Plataformas como GitHub generan automáticamente formatos de cita a partir de este archivo.
+- **codemeta.json**: Contiene metadatos estandarizados que describen el software, incluyendo autoría, versión, licencia e identificadores relacionados, como el DOI de Zenodo. Este formato mejora la interoperabilidad con repositorios de investigación y sistemas de recolección de metadatos.
+
+---
+
 ## Ejecución usando Docker
 
 (desde la carpeta donde esta el Dockerfile)
